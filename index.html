@@ -1,0 +1,2875 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TRY OUT TKA SMP - SMP Negeri 5 Sajira</title>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- KaTeX untuk Render Rumus Matematika -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous" />
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
+
+  <!-- React 18 & Babel Standalone -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: #f1f5f9;
+      color: #0f172a;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .katex { font-size: 1.05em; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #f1f5f9; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
+    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+  </style>
+</head>
+<body class="min-h-screen antialiased selection:bg-blue-600 selection:text-white">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useMemo, useCallback } = React;
+
+    // =========================================================================
+    // KONFIGURASI URL GOOGLE APPS SCRIPT WEB APP (TERHUBUNG OTOMATIS)
+    // =========================================================================
+    const DEFAULT_GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyf2XPdGJEJ-u6qWvMrIAyOmaUktiEmTg-pVahcM_VyAq9lIRTn3JQCp8V4RL6WRjmC/exec";
+
+    function getGasUrl() {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const paramApi = params.get("api");
+        if (paramApi && paramApi.startsWith("http")) {
+          localStorage.setItem("tka_gas_url", paramApi.trim());
+          return paramApi.trim();
+        }
+        const saved = localStorage.getItem("tka_gas_url");
+        if (saved && saved.trim().startsWith("http")) return saved.trim();
+      } catch (e) {}
+      return (DEFAULT_GAS_WEB_APP_URL || "").trim();
+    }
+
+    function setGasUrlStorage(url) {
+      try {
+        if (url && url.trim()) localStorage.setItem("tka_gas_url", url.trim());
+        else localStorage.removeItem("tka_gas_url");
+      } catch (e) {}
+    }
+
+    // =========================================================================
+    // 1. IKON SVG MANDIRI
+    // =========================================================================
+    const Icon = ({ name, className = "w-5 h-5" }) => {
+      const paths = {
+        book: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />,
+        users: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />,
+        chart: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />,
+        folder: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />,
+        settings: <><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></>,
+        logout: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />,
+        plus: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />,
+        upload: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />,
+        download: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />,
+        trash: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />,
+        edit: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />,
+        eye: <><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></>,
+        clock: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />,
+        check: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />,
+        x: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />,
+        chevronLeft: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />,
+        chevronRight: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />,
+        grid: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />,
+        flag: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" />,
+        cloud: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" />,
+        refresh: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />,
+        play: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+      };
+      return (
+        <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          {paths[name] || null}
+        </svg>
+      );
+    };
+
+    // =========================================================================
+    // 2. INDEXEDDB ENGINE (AsyncDB) - CACHE OFFLINE PERMANEN
+    // =========================================================================
+    const DB_NAME = "TKA_SMPN5_Sajira_HybridDB";
+    const DB_VERSION = 1;
+    const STORES = ["users", "packages", "questions", "sessions", "results", "settings"];
+
+    const AsyncDB = {
+      _db: null,
+      async open() {
+        if (this._db) return this._db;
+        return new Promise((resolve, reject) => {
+          const req = indexedDB.open(DB_NAME, DB_VERSION);
+          req.onupgradeneeded = (e) => {
+            const db = e.target.result;
+            STORES.forEach((s) => {
+              if (!db.objectStoreNames.contains(s)) {
+                db.createObjectStore(s, { keyPath: "id" });
+              }
+            });
+          };
+          req.onsuccess = (e) => {
+            this._db = e.target.result;
+            resolve(this._db);
+          };
+          req.onerror = (e) => reject(e.target.error);
+        });
+      },
+      async getAll(store) {
+        const db = await this.open();
+        return new Promise((resolve, reject) => {
+          const tx = db.transaction(store, "readonly");
+          const req = tx.objectStore(store).getAll();
+          req.onsuccess = () => resolve(req.result || []);
+          req.onerror = () => reject(req.error);
+        });
+      },
+      async get(store, id) {
+        const db = await this.open();
+        return new Promise((resolve, reject) => {
+          const tx = db.transaction(store, "readonly");
+          const req = tx.objectStore(store).get(id);
+          req.onsuccess = () => resolve(req.result || null);
+          req.onerror = () => reject(req.error);
+        });
+      },
+      async put(store, item) {
+        const db = await this.open();
+        return new Promise((resolve, reject) => {
+          const tx = db.transaction(store, "readwrite");
+          const req = tx.objectStore(store).put(item);
+          req.onsuccess = () => resolve(item);
+          req.onerror = () => reject(req.error);
+        });
+      },
+      async bulkPut(store, items) {
+        const db = await this.open();
+        return new Promise((resolve, reject) => {
+          const tx = db.transaction(store, "readwrite");
+          const os = tx.objectStore(store);
+          items.forEach((item) => os.put(item));
+          tx.oncomplete = () => resolve(true);
+          tx.onerror = () => reject(tx.error);
+        });
+      },
+      async delete(store, id) {
+        const db = await this.open();
+        return new Promise((resolve, reject) => {
+          const tx = db.transaction(store, "readwrite");
+          const req = tx.objectStore(store).delete(id);
+          req.onsuccess = () => resolve(true);
+          req.onerror = () => reject(req.error);
+        });
+      },
+      async clear(store) {
+        const db = await this.open();
+        return new Promise((resolve, reject) => {
+          const tx = db.transaction(store, "readwrite");
+          const req = tx.objectStore(store).clear();
+          req.onsuccess = () => resolve(true);
+          req.onerror = () => reject(req.error);
+        });
+      }
+    };
+
+    // =========================================================================
+    // 3. DATA AWAL (SEED DATA)
+    // =========================================================================
+    const SEED_USERS = [
+      { id: "admin_1", username: "admin", password: "123", name: "Administrator SMPN 5 Sajira", role: "admin", kelas: "Staf" },
+      { id: "stu_1", username: "0091234501", password: "123", name: "Ahmad Fauzan", role: "student", kelas: "IX-A" },
+      { id: "stu_2", username: "0091234502", password: "123", name: "Siti Nurhaliza", role: "student", kelas: "IX-A" },
+      { id: "stu_3", username: "0091234503", password: "123", name: "Rizky Pratama", role: "student", kelas: "IX-B" }
+    ];
+
+    const SEED_PACKAGES = [
+      {
+        id: "pkg_tka_1",
+        title: "Try Out TKA Utama (Literasi & Numerasi)",
+        category: "TKA",
+        durationMinutes: 60,
+        shuffleQuestions: true,
+        active: true,
+        description: "Simulasi Tes Kemampuan Akademik SMP (Pilihan Ganda, PG Kompleks, Menjodohkan, Isian Singkat)."
+      },
+      {
+        id: "pkg_survei_1",
+        title: "Survei Karakter & SULINGJAR SMP",
+        category: "SURVEI",
+        durationMinutes: 30,
+        shuffleQuestions: true,
+        active: true,
+        description: "Instrumen survei karakter dan lingkungan belajar siswa."
+      }
+    ];
+
+    const SEED_QUESTIONS = [
+      {
+        id: "q_1",
+        packageId: "pkg_tka_1",
+        type: "PG",
+        text: "Hasil penyederhanaan dari bentuk akar \\(3\\sqrt{5} + 4\\sqrt{5}\\) adalah ....",
+        options: ["\\(7\\sqrt{5}\\)", "\\(7\\sqrt{10}\\)", "\\(12\\sqrt{5}\\)", "\\(12\\sqrt{25}\\)", "\\(\\sqrt{35}\\)"],
+        correctAnswer: [0],
+        matchingPairs: [],
+        surveyWeights: [],
+        image: ""
+      },
+      {
+        id: "q_2",
+        packageId: "pkg_tka_1",
+        type: "PG",
+        text: "Read the text below carefully!<br><br>Once upon a time in Lebak, Banten, there lived a student named Ardi who planted bamboo trees along the riverbank every morning.<br><br>“Why do you plant trees that take years to grow?” asked his neighbor.<br>“Because future generations deserve clean water and shade,” Ardi replied.<br><br>What is the moral value of the story?",
+        options: [
+          "Caring for nature brings long-term benefits for future generations",
+          "Bamboo trees grow faster than any other plant",
+          "Students should only focus on farming in the morning",
+          "Neighbors should never ask questions about gardening"
+        ],
+        correctAnswer: [0],
+        matchingPairs: [],
+        surveyWeights: [],
+        image: ""
+      },
+      {
+        id: "q_3",
+        packageId: "pkg_tka_1",
+        type: "PGK",
+        text: "Pilihlah dua pernyataan yang BENAR mengenai sifat bangun datar persegi panjang! (Pilih lebih dari satu)",
+        options: [
+          "Memiliki dua pasang sisi yang sejajar dan sama panjang",
+          "Keempat sudutnya merupakan sudut siku-siku (\\(90^\\circ\\))",
+          "Keempat sisinya selalu memiliki panjang yang sama",
+          "Diagonal-diagonalnya berpotongan tegak lurus"
+        ],
+        correctAnswer: [0, 1],
+        matchingPairs: [],
+        surveyWeights: [],
+        image: ""
+      },
+      {
+        id: "q_4",
+        packageId: "pkg_tka_1",
+        type: "MENJODOHKAN",
+        text: "Jodohkanlah operasi hitung bilangan berpangkat dan akar berikut dengan hasil yang tepat!",
+        options: [],
+        correctAnswer: [],
+        matchingPairs: [
+          { id: "m1", left: "\\(2^3 \\times 2^2\\)", right: "\\(32\\)" },
+          { id: "m2", left: "\\(\\sqrt{144} + \\sqrt{25}\\)", right: "\\(17\\)" },
+          { id: "m3", left: "\\(5^0 + 3^2\\)", right: "\\(10\\)" }
+        ],
+        surveyWeights: [],
+        image: ""
+      },
+      {
+        id: "q_5",
+        packageId: "pkg_tka_1",
+        type: "ISIAN",
+        text: "Sebuah taman berbentuk persegi memiliki keliling \\(48\\text{ cm}\\). Panjang sisi taman tersebut adalah ... cm. (Tulis angkanya saja)",
+        options: [],
+        correctAnswer: ["12"],
+        matchingPairs: [],
+        surveyWeights: [],
+        image: ""
+      },
+      {
+        id: "q_s1",
+        packageId: "pkg_survei_1",
+        type: "SURVEI",
+        text: "Ketika melihat teman mengalami kesulitan memahami materi pelajaran di kelas, sikap yang paling mencerminkan diri Anda adalah ....",
+        options: [
+          "Segera menawarkan bantuan dan menjelaskan materi dengan sabar",
+          "Membantunya jika ia meminta tolong terlebih dahulu",
+          "Membiarkannya karena khawatir mengganggu konsentrasinya",
+          "Tidak peduli karena setiap siswa bertanggung jawab atas nilainya sendiri"
+        ],
+        correctAnswer: [],
+        matchingPairs: [],
+        surveyWeights: [4, 3, 2, 1],
+        image: ""
+      },
+      {
+        id: "q_s2",
+        packageId: "pkg_survei_1",
+        type: "SURVEI",
+        text: "Dalam kegiatan diskusi kelompok di sekolah, terjadi perbedaan pendapat yang cukup tajam antaranggota. Tindakan yang akan Anda lakukan adalah ....",
+        options: [
+          "Mendengarkan semua pendapat dan mengajak bermusyawarah mencari titik temu",
+          "Mengikuti suara terbanyak agar diskusi cepat selesai",
+          "Diam saja dan menyerahkan keputusan sepenuhnya kepada ketua kelompok",
+          "Memaksakan pendapat pribadi karena merasa paling benar"
+        ],
+        correctAnswer: [],
+        matchingPairs: [],
+        surveyWeights: [4, 3, 2, 1],
+        image: ""
+      }
+    ];
+
+    const SEED_CONFIG = {
+      id: "app_config",
+      schoolName: "SMP NEGERI 5 SAJIRA",
+      appTitle: "TRY OUT TKA SMP"
+    };
+
+    // =========================================================================
+    // 4. MESIN SINKRONISASI GOOGLE SHEETS + INDEXEDDB (CloudSync)
+    // =========================================================================
+    const CloudSync = {
+      async postToGas(payload) {
+        const url = getGasUrl();
+        if (!url) return { status: "local_only" };
+        const res = await fetch(url, {
+          method: "POST",
+          redirect: "follow",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify(payload)
+        });
+        return await res.json();
+      },
+
+      async pullAllFromCloud() {
+        const url = getGasUrl();
+        if (!url) {
+          await this.ensureLocalSeed();
+          return { synced: false, mode: "local" };
+        }
+
+        try {
+          // 1. Kirim ulang hasil ujian tertunda jika sebelumnya sempat offline
+          const localResults = await AsyncDB.getAll("results");
+          const pendingResults = localResults.filter((r) => r.pendingSync);
+          if (pendingResults.length > 0) {
+            const cleanPending = pendingResults.map(({ pendingSync, ...rest }) => rest);
+            const upRes = await this.postToGas({ action: "bulkPut", store: "results", items: cleanPending });
+            if (upRes.status === "ok") {
+              await AsyncDB.bulkPut("results", cleanPending);
+            }
+          }
+
+          // 2. Tarik seluruh data terkini dari Google Sheets
+          const res = await fetch(`${url}?action=syncAll&t=${Date.now()}`, {
+            method: "GET",
+            redirect: "follow"
+          });
+          const json = await res.json();
+          if (json.status !== "ok" || !json.data) {
+            throw new Error(json.message || "Respon Google Sheets tidak valid");
+          }
+
+          const { users = [], packages = [], questions = [], results = [], settings = [] } = json.data;
+
+          // Jika Google Sheets masih kosong pada pemakaian pertama, isi data awal
+          if (users.length === 0 && packages.length === 0) {
+            await AsyncDB.bulkPut("users", SEED_USERS);
+            await AsyncDB.bulkPut("packages", SEED_PACKAGES);
+            await AsyncDB.bulkPut("questions", SEED_QUESTIONS);
+            await AsyncDB.put("settings", SEED_CONFIG);
+
+            await Promise.all([
+              this.postToGas({ action: "bulkPut", store: "users", items: SEED_USERS }),
+              this.postToGas({ action: "bulkPut", store: "packages", items: SEED_PACKAGES }),
+              this.postToGas({ action: "bulkPut", store: "questions", items: SEED_QUESTIONS }),
+              this.postToGas({ action: "put", store: "settings", item: SEED_CONFIG })
+            ]);
+            return { synced: true, mode: "cloud" };
+          }
+
+          // Perbarui cache IndexedDB lokal sesuai data terbaru di Google Sheets
+          await Promise.all([
+            AsyncDB.clear("users").then(() => users.length && AsyncDB.bulkPut("users", users)),
+            AsyncDB.clear("packages").then(() => packages.length && AsyncDB.bulkPut("packages", packages)),
+            AsyncDB.clear("questions").then(() => questions.length && AsyncDB.bulkPut("questions", questions)),
+            AsyncDB.clear("results").then(() => results.length && AsyncDB.bulkPut("results", results)),
+            settings.length ? AsyncDB.bulkPut("settings", settings) : Promise.resolve()
+          ]);
+
+          return { synced: true, mode: "cloud" };
+        } catch (err) {
+          console.warn("Mode offline aktif, menggunakan cache lokal IndexedDB:", err);
+          await this.ensureLocalSeed();
+          return { synced: false, mode: "offline_fallback", error: err.message };
+        }
+      },
+
+      async ensureLocalSeed() {
+        const cfg = await AsyncDB.get("settings", "app_config");
+        if (!cfg) {
+          await AsyncDB.bulkPut("users", SEED_USERS);
+          await AsyncDB.bulkPut("packages", SEED_PACKAGES);
+          await AsyncDB.bulkPut("questions", SEED_QUESTIONS);
+          await AsyncDB.put("settings", SEED_CONFIG);
+        }
+      },
+
+      async saveItem(store, item) {
+        await AsyncDB.put(store, item);
+        const url = getGasUrl();
+        if (!url) return { synced: false, local: true };
+        try {
+          const { pendingSync, ...cleanItem } = item;
+          const res = await this.postToGas({ action: "put", store, item: cleanItem });
+          if (res.status === "ok") {
+            if (item.pendingSync) await AsyncDB.put(store, cleanItem);
+            return { synced: true };
+          }
+          throw new Error(res.message || "Gagal simpan ke cloud");
+        } catch (err) {
+          if (store === "results") {
+            await AsyncDB.put(store, { ...item, pendingSync: true });
+          }
+          return { synced: false, error: err.message };
+        }
+      },
+
+      async saveBulk(store, items) {
+        await AsyncDB.bulkPut(store, items);
+        const url = getGasUrl();
+        if (!url) return { synced: false, local: true };
+        try {
+          const res = await this.postToGas({ action: "bulkPut", store, items });
+          return { synced: res.status === "ok" };
+        } catch (err) {
+          return { synced: false, error: err.message };
+        }
+      },
+
+      async removeItem(store, id) {
+        await AsyncDB.delete(store, id);
+        const url = getGasUrl();
+        if (!url) return { synced: false, local: true };
+        try {
+          const res = await this.postToGas({ action: "delete", store, id });
+          return { synced: res.status === "ok" };
+        } catch (err) {
+          return { synced: false, error: err.message };
+        }
+      }
+    };
+
+    // =========================================================================
+    // 5. UTILITAS MATEMATIKA (KaTeX), KOMPRESI GAMBAR & PARSER CSV RFC-4180
+    // =========================================================================
+    function formatMathHtml(rawText) {
+      if (rawText === null || rawText === undefined) return "";
+      let text = String(rawText);
+      const mathBlocks = [];
+
+      const storeMath = (expr, displayMode) => {
+        const idx = mathBlocks.length;
+        let rendered = expr;
+        try {
+          if (window.katex) {
+            rendered = window.katex.renderToString(expr.trim(), {
+              throwOnError: false,
+              displayMode
+            });
+          } else {
+            rendered = `<code class="px-1.5 py-0.5 bg-slate-100 rounded text-blue-700 font-mono text-sm">${expr}</code>`;
+          }
+        } catch (e) {
+          rendered = expr;
+        }
+        mathBlocks.push(rendered);
+        return `@@MATH_${idx}@@`;
+      };
+
+      text = text.replace(/\$\$([\s\S]+?)\$\$/g, (_, e) => storeMath(e, true));
+      text = text.replace(/\\\[([\s\S]+?)\\\]/g, (_, e) => storeMath(e, true));
+      text = text.replace(/\\\(([\s\S]+?)\\\)/g, (_, e) => storeMath(e, false));
+      text = text.replace(/\$([^$\n]+?)\$/g, (_, e) => storeMath(e, false));
+
+      text = text.replace(/<br\s*\/?>/gi, "\n");
+      text = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      text = text.replace(/\n/g, "<br/>");
+
+      mathBlocks.forEach((html, idx) => {
+        text = text.replace(`@@MATH_${idx}@@`, html);
+      });
+      return text;
+    }
+
+    const MathText = ({ text, className = "" }) => {
+      const [ready, setReady] = useState(Boolean(window.katex));
+      useEffect(() => {
+        if (window.katex) { setReady(true); return; }
+        const t = setInterval(() => {
+          if (window.katex) { setReady(true); clearInterval(t); }
+        }, 150);
+        return () => clearInterval(t);
+      }, []);
+
+      const html = useMemo(() => formatMathHtml(text), [text, ready]);
+      return <span className={className} dangerouslySetInnerHTML={{ __html: html }} />;
+    };
+
+    function compressImageToDataUrl(file, maxDim = 750, quality = 0.72) {
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          const img = new Image();
+          img.onload = () => {
+            let { width, height } = img;
+            if (width > maxDim || height > maxDim) {
+              if (width > height) {
+                height = Math.round((height * maxDim) / width);
+                width = maxDim;
+              } else {
+                width = Math.round((width * maxDim) / height);
+                height = maxDim;
+              }
+            }
+            const canvas = document.createElement("canvas");
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext("2d");
+            ctx.drawImage(img, 0, 0, width, height);
+            resolve(canvas.toDataURL("image/jpeg", quality));
+          };
+          img.src = ev.target.result;
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function parseCsvRows(csvText) {
+      const rows = [];
+      let row = [];
+      let field = "";
+      let inQuotes = false;
+      const clean = csvText.replace(/^\uFEFF/, "").replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+      const firstLine = clean.split("\n")[0] || "";
+      const delimiter = firstLine.split(";").length > firstLine.split(",").length ? ";" : ",";
+
+      for (let i = 0; i < clean.length; i++) {
+        const c = clean[i];
+        const next = clean[i + 1];
+        if (c === '"') {
+          if (inQuotes && next === '"') {
+            field += '"';
+            i++;
+          } else {
+            inQuotes = !inQuotes;
+          }
+        } else if (c === delimiter && !inQuotes) {
+          row.push(field.trim());
+          field = "";
+        } else if (c === "\n" && !inQuotes) {
+          row.push(field.trim());
+          if (row.some((cell) => cell !== "")) rows.push(row);
+          row = [];
+          field = "";
+        } else {
+          field += c;
+        }
+      }
+      if (field !== "" || row.length > 0) {
+        row.push(field.trim());
+        if (row.some((cell) => cell !== "")) rows.push(row);
+      }
+      return rows;
+    }
+
+    function parseKeyIndices(rawKey) {
+      if (!rawKey) return [];
+      const letterMap = { A: 0, B: 1, C: 2, D: 3, E: 4 };
+      return String(rawKey)
+        .split(/[|,;\s]+/)
+        .map((t) => t.trim().toUpperCase())
+        .filter(Boolean)
+        .map((t) => (letterMap[t] !== undefined ? letterMap[t] : parseInt(t, 10)))
+        .filter((n) => !isNaN(n) && n >= 0);
+    }
+
+    function shuffleArray(arr) {
+      const copy = [...arr];
+      for (let i = copy.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+      }
+      return copy;
+    }
+
+    // =========================================================================
+    // 6. MESIN PENILAIAN OTOMATIS (TKA & SURVEI)
+    // =========================================================================
+    function evaluateExam(questions, answersMap, isSurveyPackage) {
+      let totalScore = 0;
+      let maxScore = 0;
+      let correctCount = 0;
+      let wrongCount = 0;
+      let blankCount = 0;
+      const details = [];
+
+      questions.forEach((q, idx) => {
+        const ans = answersMap[q.id];
+        if (isSurveyPackage || q.type === "SURVEI") {
+          const weights = q.surveyWeights && q.surveyWeights.length ? q.surveyWeights : [4, 3, 2, 1];
+          const qMax = Math.max(...weights, 0);
+          maxScore += qMax;
+          const chosenIdx = typeof ans === "number" ? ans : -1;
+          const earned = chosenIdx >= 0 ? Number(weights[chosenIdx] || 0) : 0;
+          totalScore += earned;
+          if (chosenIdx < 0) blankCount++;
+          else correctCount++;
+
+          details.push({
+            no: idx + 1,
+            questionId: q.id,
+            type: q.type,
+            text: q.text,
+            studentAnswerText: chosenIdx >= 0 ? (q.options[chosenIdx] || `Opsi ${chosenIdx + 1}`) : "(Kosong)",
+            correctAnswerText: `Skor Maksimal: ${qMax}`,
+            status: chosenIdx >= 0 ? `Skor +${earned}` : "Kosong",
+            isCorrect: chosenIdx >= 0,
+            earned
+          });
+          return;
+        }
+
+        if (q.type === "PG") {
+          const isBlank = ans === undefined || ans === null || ans === "";
+          const correctIdx = Array.isArray(q.correctAnswer) ? q.correctAnswer[0] : Number(q.correctAnswer);
+          const isRight = !isBlank && Number(ans) === Number(correctIdx);
+          if (isBlank) blankCount++;
+          else if (isRight) correctCount++;
+          else wrongCount++;
+
+          details.push({
+            no: idx + 1,
+            questionId: q.id,
+            type: "PG",
+            text: q.text,
+            studentAnswerText: !isBlank ? `${String.fromCharCode(65 + Number(ans))}. ${q.options[Number(ans)] || ""}` : "(Kosong)",
+            correctAnswerText: `${String.fromCharCode(65 + Number(correctIdx))}. ${q.options[Number(correctIdx)] || ""}`,
+            status: isBlank ? "Kosong" : isRight ? "Benar" : "Salah",
+            isCorrect: isRight,
+            earned: isRight ? 1 : 0
+          });
+        } else if (q.type === "PGK") {
+          const chosen = Array.isArray(ans) ? [...ans].map(Number).sort() : [];
+          const keys = Array.isArray(q.correctAnswer) ? [...q.correctAnswer].map(Number).sort() : [];
+          const isBlank = chosen.length === 0;
+          const isRight = !isBlank && chosen.length === keys.length && chosen.every((v, i) => v === keys[i]);
+          if (isBlank) blankCount++;
+          else if (isRight) correctCount++;
+          else wrongCount++;
+
+          details.push({
+            no: idx + 1,
+            questionId: q.id,
+            type: "PGK",
+            text: q.text,
+            studentAnswerText: !isBlank ? chosen.map((i) => `${String.fromCharCode(65 + i)}. ${q.options[i] || ""}`).join(" | ") : "(Kosong)",
+            correctAnswerText: keys.map((i) => `${String.fromCharCode(65 + i)}. ${q.options[i] || ""}`).join(" | "),
+            status: isBlank ? "Kosong" : isRight ? "Benar" : "Salah",
+            isCorrect: isRight,
+            earned: isRight ? 1 : 0
+          });
+        } else if (q.type === "MENJODOHKAN") {
+          const pairs = q.matchingPairs || [];
+          const userPairs = ans && typeof ans === "object" ? ans : {};
+          const filledCount = Object.values(userPairs).filter((v) => v !== "" && v !== undefined).length;
+          const isBlank = filledCount === 0;
+          let matched = 0;
+          pairs.forEach((p) => {
+            if ((userPairs[p.id] || "").trim() === (p.right || "").trim()) matched++;
+          });
+          const isRight = !isBlank && pairs.length > 0 && matched === pairs.length;
+          if (isBlank) blankCount++;
+          else if (isRight) correctCount++;
+          else wrongCount++;
+
+          details.push({
+            no: idx + 1,
+            questionId: q.id,
+            type: "MENJODOHKAN",
+            text: q.text,
+            studentAnswerText: !isBlank ? pairs.map((p) => `${p.left} → ${userPairs[p.id] || "(Belum dipilih)"}`).join(" | ") : "(Kosong)",
+            correctAnswerText: pairs.map((p) => `${p.left} → ${p.right}`).join(" | "),
+            status: isBlank ? "Kosong" : isRight ? "Benar" : `Salah (${matched}/${pairs.length} cocok)`,
+            isCorrect: isRight,
+            earned: pairs.length > 0 ? matched / pairs.length : 0
+          });
+        } else if (q.type === "ISIAN") {
+          const userStr = (ans || "").toString().trim();
+          const isBlank = userStr === "";
+          const validKeys = (Array.isArray(q.correctAnswer) ? q.correctAnswer : [q.correctAnswer])
+            .map((k) => String(k || "").trim().toLowerCase())
+            .filter(Boolean);
+          const isRight = !isBlank && validKeys.includes(userStr.toLowerCase());
+          if (isBlank) blankCount++;
+          else if (isRight) correctCount++;
+          else wrongCount++;
+
+          details.push({
+            no: idx + 1,
+            questionId: q.id,
+            type: "ISIAN",
+            text: q.text,
+            studentAnswerText: !isBlank ? userStr : "(Kosong)",
+            correctAnswerText: validKeys.join(" / "),
+            status: isBlank ? "Kosong" : isRight ? "Benar" : "Salah",
+            isCorrect: isRight,
+            earned: isRight ? 1 : 0
+          });
+        }
+      });
+
+      const finalScore = (isSurveyPackage || questions.every((q) => q.type === "SURVEI"))
+        ? totalScore
+        : (questions.length > 0 ? Number(((correctCount / questions.length) * 100).toFixed(2)) : 0);
+
+      return {
+        score: finalScore,
+        maxScore,
+        correctCount,
+        wrongCount,
+        blankCount,
+        totalQuestions: questions.length,
+        details
+      };
+    }
+
+    // =========================================================================
+    // 7. HALAMAN LOGIN
+    // =========================================================================
+    const LoginView = ({ config, syncStatus, onRefreshSync, onLogin }) => {
+      const [username, setUsername] = useState("");
+      const [password, setPassword] = useState("");
+      const [error, setError] = useState("");
+      const [loading, setLoading] = useState(false);
+
+      const handleSubmit = async (e) => {
+        e.preventDefault();
+        setError("");
+        setLoading(true);
+        try {
+          await onRefreshSync(true);
+          const users = await AsyncDB.getAll("users");
+          const found = users.find(
+            (u) => String(u.username).trim().toLowerCase() === username.trim().toLowerCase() && String(u.password) === password
+          );
+          if (!found) {
+            setError("Username/NISN atau password tidak sesuai.");
+          } else {
+            onLogin(found);
+          }
+        } catch (err) {
+          setError("Gagal memverifikasi akun.");
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      return (
+        <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900">
+          <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden border border-slate-200">
+            <div className="bg-blue-700 px-6 py-7 text-center text-white">
+              <p className="text-xs font-bold tracking-widest uppercase text-blue-200 mb-1">
+                {config.schoolName || "SMP NEGERI 5 SAJIRA"}
+              </p>
+              <h1 className="text-2xl font-extrabold tracking-tight">
+                {config.appTitle || "TRY OUT TKA SMP"}
+              </h1>
+            </div>
+
+            <form onSubmit={handleSubmit} className="p-6 sm:p-8 space-y-5">
+              <div className="flex items-center justify-between text-xs px-3 py-2 rounded-xl bg-slate-50 border border-slate-200">
+                <span className="flex items-center gap-1.5 font-semibold text-slate-600">
+                  <span className={`w-2 h-2 rounded-full ${syncStatus === "cloud" ? "bg-emerald-500" : "bg-amber-500"}`}></span>
+                  {syncStatus === "cloud" ? "Terhubung Google Sheets" : "Penyimpanan Lokal"}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => onRefreshSync(false)}
+                  className="text-blue-700 font-bold hover:underline flex items-center gap-1"
+                >
+                  <Icon name="refresh" className="w-3.5 h-3.5" />
+                  <span>Sinkronkan</span>
+                </button>
+              </div>
+
+              {error && (
+                <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm font-medium">
+                  {error}
+                </div>
+              )}
+
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
+                  NISN / Username
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="Masukkan NISN atau Username"
+                  className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 outline-none text-sm font-medium"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
+                  Password
+                </label>
+                <input
+                  type="password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Masukkan Password"
+                  className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 outline-none text-sm font-medium"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-3.5 px-4 bg-blue-700 hover:bg-blue-800 active:scale-[0.99] text-white font-bold rounded-xl shadow-lg shadow-blue-700/25 transition disabled:opacity-60"
+              >
+                {loading ? "Menyinkronkan & Masuk..." : "Masuk Aplikasi"}
+              </button>
+
+              <div className="pt-3 border-t border-slate-100">
+                <p className="text-xs text-slate-400 text-center mb-2">Akses Cepat Uji Coba:</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => { setUsername("admin"); setPassword("123"); }}
+                    className="py-2 px-3 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition"
+                  >
+                    Akun Admin (admin)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setUsername("0091234501"); setPassword("123"); }}
+                    className="py-2 px-3 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-semibold transition"
+                  >
+                    Akun Peserta (Siswa)
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      );
+    };
+
+    // =========================================================================
+    // 8. MESIN UJIAN PESERTA (TestEngine)
+    // =========================================================================
+    const TestEngine = ({ user, pkg, questions, onFinishExam }) => {
+      const sessionId = `${user.id}_${pkg.id}`;
+      const [orderedQuestions, setOrderedQuestions] = useState([]);
+      const [matchingOptionsPool, setMatchingOptionsPool] = useState({});
+      const [answers, setAnswers] = useState({});
+      const [flags, setFlags] = useState({});
+      const [currentIndex, setCurrentIndex] = useState(0);
+      const [secondsLeft, setSecondsLeft] = useState(pkg.durationMinutes * 60);
+      const [showGridModal, setShowGridModal] = useState(false);
+      const [showConfirmFinish, setShowConfirmFinish] = useState(false);
+      const [showTimeUpModal, setShowTimeUpModal] = useState(false);
+      const [submitting, setSubmitting] = useState(false);
+      const [ready, setReady] = useState(false);
+
+      useEffect(() => {
+        let mounted = true;
+        (async () => {
+          let session = await AsyncDB.get("sessions", sessionId);
+          if (!session) {
+            const qOrder = pkg.shuffleQuestions ? shuffleArray(questions.map((q) => q.id)) : questions.map((q) => q.id);
+            const mPools = {};
+            questions.forEach((q) => {
+              if (q.type === "MENJODOHKAN" && Array.isArray(q.matchingPairs)) {
+                mPools[q.id] = shuffleArray(q.matchingPairs.map((p) => p.right));
+              }
+            });
+            session = {
+              id: sessionId,
+              userId: user.id,
+              packageId: pkg.id,
+              questionOrder: qOrder,
+              matchingPools: mPools,
+              answers: {},
+              flags: {},
+              endTime: Date.now() + pkg.durationMinutes * 60 * 1000,
+              startedAt: Date.now()
+            };
+            await AsyncDB.put("sessions", session);
+          }
+
+          if (!mounted) return;
+          const qMap = Object.fromEntries(questions.map((q) => [q.id, q]));
+          const sorted = session.questionOrder.map((id) => qMap[id]).filter(Boolean);
+          setOrderedQuestions(sorted.length ? sorted : questions);
+          setMatchingOptionsPool(session.matchingPools || {});
+          setAnswers(session.answers || {});
+          setFlags(session.flags || {});
+          const rem = Math.max(0, Math.floor((session.endTime - Date.now()) / 1000));
+          setSecondsLeft(rem);
+          setReady(true);
+        })();
+        return () => { mounted = false; };
+      }, [sessionId]);
+
+      useEffect(() => {
+        const handleBeforeUnload = (e) => {
+          e.preventDefault();
+          e.returnValue = "";
+        };
+        window.addEventListener("beforeunload", handleBeforeUnload);
+        return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+      }, []);
+
+      const submitFinalResult = useCallback(async (latestAnswers) => {
+        if (submitting) return;
+        setSubmitting(true);
+        const evalRes = evaluateExam(orderedQuestions, latestAnswers, pkg.category === "SURVEI");
+        const resultRecord = {
+          id: `${user.id}_${pkg.id}`,
+          userId: user.id,
+          userName: user.name,
+          username: user.username,
+          kelas: user.kelas || "-",
+          packageId: pkg.id,
+          packageTitle: pkg.title,
+          packageCategory: pkg.category,
+          submittedAt: new Date().toISOString(),
+          ...evalRes
+        };
+        const syncRes = await CloudSync.saveItem("results", resultRecord);
+        await AsyncDB.delete("sessions", sessionId);
+        onFinishExam(resultRecord, syncRes.synced);
+      }, [orderedQuestions, pkg, user, sessionId, submitting, onFinishExam]);
+
+      useEffect(() => {
+        if (!ready) return;
+        if (secondsLeft <= 0) {
+          setShowTimeUpModal(true);
+          submitFinalResult(answers);
+          return;
+        }
+        const timer = setInterval(() => {
+          setSecondsLeft((prev) => {
+            if (prev <= 1) {
+              clearInterval(timer);
+              setShowTimeUpModal(true);
+              submitFinalResult(answers);
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+        return () => clearInterval(timer);
+      }, [ready, secondsLeft, answers, submitFinalResult]);
+
+      const persistAnswer = async (qId, value) => {
+        const updated = { ...answers, [qId]: value };
+        setAnswers(updated);
+        const session = await AsyncDB.get("sessions", sessionId);
+        if (session) {
+          session.answers = updated;
+          await AsyncDB.put("sessions", session);
+        }
+      };
+
+      const toggleFlag = async (qId) => {
+        const updated = { ...flags, [qId]: !flags[qId] };
+        setFlags(updated);
+        const session = await AsyncDB.get("sessions", sessionId);
+        if (session) {
+          session.flags = updated;
+          await AsyncDB.put("sessions", session);
+        }
+      };
+
+      const isQuestionAnswered = (q) => {
+        const a = answers[q.id];
+        if (q.type === "PG" || q.type === "SURVEI") return typeof a === "number";
+        if (q.type === "PGK") return Array.isArray(a) && a.length > 0;
+        if (q.type === "MENJODOHKAN") return a && Object.values(a).some((v) => v !== "" && v !== undefined);
+        if (q.type === "ISIAN") return typeof a === "string" && a.trim() !== "";
+        return false;
+      };
+
+      if (!ready || orderedQuestions.length === 0) {
+        return (
+          <div className="min-h-screen flex items-center justify-center bg-slate-100">
+            <div className="text-center">
+              <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+              <p className="text-sm font-semibold text-slate-600">Menyiapkan Lembar Ujian...</p>
+            </div>
+          </div>
+        );
+      }
+
+      const currentQ = orderedQuestions[currentIndex];
+      const mins = String(Math.floor(secondsLeft / 60)).padStart(2, "0");
+      const secs = String(secondsLeft % 60).padStart(2, "0");
+      const answeredCount = orderedQuestions.filter(isQuestionAnswered).length;
+
+      return (
+        <div className="min-h-screen flex flex-col bg-slate-100">
+          <header className="sticky top-0 z-30 bg-white border-b border-slate-200 px-4 py-3 shadow-sm">
+            <div className="max-w-7xl mx-auto flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <h2 className="text-sm sm:text-base font-extrabold text-slate-900 truncate">{pkg.title}</h2>
+                <p className="text-xs text-slate-500 truncate">{user.name} ({user.kelas || user.username})</p>
+              </div>
+
+              <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+                <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-mono font-bold text-sm ${secondsLeft < 300 ? "bg-red-100 text-red-700 animate-pulse" : "bg-blue-50 text-blue-700"}`}>
+                  <Icon name="clock" className="w-4 h-4" />
+                  <span>{mins}:{secs}</span>
+                </div>
+
+                <button
+                  onClick={() => setShowGridModal(true)}
+                  className="lg:hidden flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold"
+                >
+                  <Icon name="grid" className="w-4 h-4" />
+                  <span>{answeredCount}/{orderedQuestions.length}</span>
+                </button>
+              </div>
+            </div>
+          </header>
+
+          <main className="flex-1 max-w-7xl w-full mx-auto p-4 pb-24 lg:pb-8 grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <div className="lg:col-span-8 bg-white rounded-2xl shadow-sm border border-slate-200 p-5 sm:p-7 flex flex-col justify-between">
+              <div>
+                <div className="flex flex-wrap items-center justify-between gap-2 pb-4 mb-5 border-b border-slate-100">
+                  <div className="flex items-center gap-2">
+                    <span className="px-3 py-1 rounded-lg bg-blue-700 text-white text-xs font-extrabold">
+                      SOAL NO. {currentIndex + 1}
+                    </span>
+                    <span className="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-600 text-xs font-bold">
+                      {currentQ.type === "PG" && "Pilihan Ganda"}
+                      {currentQ.type === "PGK" && "Pilihan Ganda Kompleks"}
+                      {currentQ.type === "MENJODOHKAN" && "Menjodohkan"}
+                      {currentQ.type === "ISIAN" && "Isian Singkat"}
+                      {currentQ.type === "SURVEI" && "Survei Karakter"}
+                    </span>
+                  </div>
+
+                  <button
+                    onClick={() => toggleFlag(currentQ.id)}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border transition ${
+                      flags[currentQ.id]
+                        ? "bg-amber-500 border-amber-500 text-white"
+                        : "bg-white border-slate-200 text-slate-600 hover:bg-amber-50"
+                    }`}
+                  >
+                    <Icon name="flag" className="w-3.5 h-3.5" />
+                    <span>{flags[currentQ.id] ? "Ragu-ragu Aktif" : "Ragu-ragu"}</span>
+                  </button>
+                </div>
+
+                {currentQ.image && (
+                  <div className="mb-5">
+                    <img
+                      src={currentQ.image}
+                      alt="Ilustrasi Soal"
+                      className="max-h-72 rounded-xl border border-slate-200 object-contain bg-slate-50"
+                    />
+                  </div>
+                )}
+
+                <div className="text-base sm:text-[17px] leading-relaxed text-slate-800 mb-6 whitespace-pre-line">
+                  <MathText text={currentQ.text} />
+                </div>
+
+                {(currentQ.type === "PG" || currentQ.type === "SURVEI") && (
+                  <div className="space-y-3">
+                    {(currentQ.options || []).map((opt, idx) => {
+                      const selected = answers[currentQ.id] === idx;
+                      return (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => persistAnswer(currentQ.id, idx)}
+                          className={`w-full text-left p-4 rounded-xl border-2 transition flex items-start gap-3.5 ${
+                            selected
+                              ? "border-blue-600 bg-blue-50/70 shadow-sm"
+                              : "border-slate-200 hover:border-blue-300 hover:bg-slate-50"
+                          }`}
+                        >
+                          <span className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-extrabold shrink-0 mt-0.5 ${
+                            selected ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-700"
+                          }`}>
+                            {String.fromCharCode(65 + idx)}
+                          </span>
+                          <span className="text-sm sm:text-base text-slate-800 pt-0.5">
+                            <MathText text={opt} />
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {currentQ.type === "PGK" && (
+                  <div className="space-y-3">
+                    <p className="text-xs font-semibold text-blue-700 bg-blue-50 px-3 py-2 rounded-lg">
+                      Pilih satu atau lebih jawaban yang dianggap benar.
+                    </p>
+                    {(currentQ.options || []).map((opt, idx) => {
+                      const chosenList = Array.isArray(answers[currentQ.id]) ? answers[currentQ.id] : [];
+                      const selected = chosenList.includes(idx);
+                      const toggle = () => {
+                        const next = selected ? chosenList.filter((i) => i !== idx) : [...chosenList, idx];
+                        persistAnswer(currentQ.id, next);
+                      };
+                      return (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={toggle}
+                          className={`w-full text-left p-4 rounded-xl border-2 transition flex items-start gap-3.5 ${
+                            selected
+                              ? "border-blue-600 bg-blue-50/70 shadow-sm"
+                              : "border-slate-200 hover:border-blue-300 hover:bg-slate-50"
+                          }`}
+                        >
+                          <span className={`w-6 h-6 rounded-md flex items-center justify-center shrink-0 mt-0.5 border ${
+                            selected ? "bg-blue-600 border-blue-600 text-white" : "bg-white border-slate-300"
+                          }`}>
+                            {selected && <Icon name="check" className="w-4 h-4" />}
+                          </span>
+                          <span className="text-sm sm:text-base text-slate-800">
+                            <MathText text={opt} />
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {currentQ.type === "MENJODOHKAN" && (
+                  <div className="space-y-4">
+                    <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
+                      <p className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
+                        Pilihan Pasangan Jawaban:
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {(matchingOptionsPool[currentQ.id] || (currentQ.matchingPairs || []).map((p) => p.right)).map((optVal, i) => (
+                          <span key={i} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-sm font-medium text-slate-800">
+                            <strong className="text-blue-700">{String.fromCharCode(65 + i)}.</strong>
+                            <MathText text={optVal} />
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      {(currentQ.matchingPairs || []).map((pair, idx) => {
+                        const currentMap = answers[currentQ.id] || {};
+                        const pool = matchingOptionsPool[currentQ.id] || (currentQ.matchingPairs || []).map((p) => p.right);
+                        return (
+                          <div key={pair.id || idx} className="p-4 rounded-xl border border-slate-200 bg-white flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div className="flex items-start gap-2.5 text-sm sm:text-base font-medium text-slate-800">
+                              <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-600 text-xs font-bold mt-0.5">
+                                {idx + 1}
+                              </span>
+                              <MathText text={pair.left} />
+                            </div>
+
+                            <select
+                              value={currentMap[pair.id] || ""}
+                              onChange={(e) => {
+                                const nextMap = { ...currentMap, [pair.id]: e.target.value };
+                                persistAnswer(currentQ.id, nextMap);
+                              }}
+                              className="sm:w-64 px-3.5 py-2.5 rounded-xl border border-slate-300 bg-slate-50 focus:bg-white focus:border-blue-600 text-sm font-semibold text-slate-800 outline-none"
+                            >
+                              <option value="">-- Pilih Pasangan --</option>
+                              {pool.map((optVal, oIdx) => (
+                                <option key={oIdx} value={optVal}>
+                                  {String.fromCharCode(65 + oIdx)}. {optVal.replace(/\\\(|\\\)|\$/g, "")}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {currentQ.type === "ISIAN" && (
+                  <div className="max-w-md">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
+                      Ketik Jawaban Singkat Anda:
+                    </label>
+                    <input
+                      type="text"
+                      value={answers[currentQ.id] || ""}
+                      onChange={(e) => persistAnswer(currentQ.id, e.target.value)}
+                      placeholder="Tulis jawaban di sini..."
+                      className="w-full px-4 py-3 rounded-xl border-2 border-slate-300 focus:border-blue-600 outline-none text-base font-bold text-slate-900"
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div className="pt-6 mt-8 border-t border-slate-100 flex items-center justify-between gap-3">
+                <button
+                  type="button"
+                  disabled={currentIndex === 0}
+                  onClick={() => setCurrentIndex((i) => Math.max(0, i - 1))}
+                  className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-slate-300 text-slate-700 font-bold text-sm hover:bg-slate-50 disabled:opacity-40"
+                >
+                  <Icon name="chevronLeft" className="w-4 h-4" />
+                  <span>Sebelumnya</span>
+                </button>
+
+                {currentIndex < orderedQuestions.length - 1 ? (
+                  <button
+                    type="button"
+                    onClick={() => setCurrentIndex((i) => Math.min(orderedQuestions.length - 1, i + 1))}
+                    className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-blue-700 hover:bg-blue-800 text-white font-bold text-sm shadow-sm"
+                  >
+                    <span>Selanjutnya</span>
+                    <Icon name="chevronRight" className="w-4 h-4" />
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmFinish(true)}
+                    className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-sm"
+                  >
+                    <Icon name="check" className="w-4 h-4" />
+                    <span>Selesai Ujian</span>
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <aside className="hidden lg:flex lg:col-span-4 flex-col gap-4">
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-sm font-extrabold text-slate-800">Navigasi Nomor Soal</h3>
+                  <span className="text-xs font-bold text-blue-700 bg-blue-50 px-2.5 py-1 rounded-lg">
+                    Terjawab: {answeredCount}/{orderedQuestions.length}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-5 gap-2 max-h-80 overflow-y-auto pr-1">
+                  {orderedQuestions.map((q, idx) => {
+                    const active = idx === currentIndex;
+                    const answered = isQuestionAnswered(q);
+                    const flagged = flags[q.id];
+                    let btnStyle = "bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200";
+                    if (flagged) btnStyle = "bg-amber-400 text-slate-900 border-amber-500";
+                    else if (answered) btnStyle = "bg-emerald-600 text-white border-emerald-600";
+                    if (active) btnStyle += " ring-2 ring-blue-600 ring-offset-2";
+
+                    return (
+                      <button
+                        key={q.id}
+                        onClick={() => setCurrentIndex(idx)}
+                        className={`h-10 rounded-xl border font-bold text-xs transition ${btnStyle}`}
+                      >
+                        {idx + 1}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className="mt-5 pt-4 border-t border-slate-100 grid grid-cols-3 gap-2 text-[11px] font-semibold text-slate-600">
+                  <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-emerald-600"></span> Dijawab</div>
+                  <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-amber-400"></span> Ragu</div>
+                  <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-slate-200"></span> Kosong</div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmFinish(true)}
+                  className="mt-5 w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-sm shadow-md shadow-emerald-600/20 transition"
+                >
+                  Kumpulkan & Selesai Ujian
+                </button>
+              </div>
+            </aside>
+          </main>
+
+          <div className="lg:hidden fixed bottom-0 inset-x-0 bg-white border-t border-slate-200 p-3 flex items-center justify-between gap-2 z-30">
+            <button
+              onClick={() => setShowGridModal(true)}
+              className="flex-1 py-2.5 px-3 rounded-xl bg-slate-100 text-slate-800 font-bold text-xs flex items-center justify-center gap-1.5"
+            >
+              <Icon name="grid" className="w-4 h-4" />
+              <span>Daftar Soal ({answeredCount}/{orderedQuestions.length})</span>
+            </button>
+            <button
+              onClick={() => setShowConfirmFinish(true)}
+              className="flex-1 py-2.5 px-3 rounded-xl bg-emerald-600 text-white font-bold text-xs flex items-center justify-center gap-1.5"
+            >
+              <Icon name="check" className="w-4 h-4" />
+              <span>Selesai Ujian</span>
+            </button>
+          </div>
+
+          {showGridModal && (
+            <div className="fixed inset-0 z-50 bg-slate-900/60 flex items-end sm:items-center justify-center p-4">
+              <div className="bg-white w-full max-w-md rounded-2xl p-5 shadow-2xl">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-extrabold text-slate-900">Pilih Nomor Soal</h3>
+                  <button onClick={() => setShowGridModal(false)} className="p-1.5 rounded-lg bg-slate-100">
+                    <Icon name="x" className="w-4 h-4" />
+                  </button>
+                </div>
+                <div className="grid grid-cols-5 gap-2 max-h-72 overflow-y-auto">
+                  {orderedQuestions.map((q, idx) => {
+                    const answered = isQuestionAnswered(q);
+                    const flagged = flags[q.id];
+                    let cls = "bg-slate-100 text-slate-700";
+                    if (flagged) cls = "bg-amber-400 text-slate-900";
+                    else if (answered) cls = "bg-emerald-600 text-white";
+                    if (idx === currentIndex) cls += " ring-2 ring-blue-600";
+                    return (
+                      <button
+                        key={q.id}
+                        onClick={() => { setCurrentIndex(idx); setShowGridModal(false); }}
+                        className={`h-10 rounded-xl font-bold text-xs ${cls}`}
+                      >
+                        {idx + 1}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {showConfirmFinish && (
+            <div className="fixed inset-0 z-50 bg-slate-900/60 flex items-center justify-center p-4">
+              <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl">
+                <h3 className="text-lg font-extrabold text-slate-900 mb-2">Konfirmasi Selesai Ujian</h3>
+                <p className="text-sm text-slate-600 mb-4">
+                  Anda telah menjawab <strong>{answeredCount}</strong> dari <strong>{orderedQuestions.length}</strong> soal.
+                  {answeredCount < orderedQuestions.length && (
+                    <span className="block mt-1 text-amber-700 font-semibold">
+                      Masih ada {orderedQuestions.length - answeredCount} soal yang belum dijawab!
+                    </span>
+                  )}
+                </p>
+                <div className="flex gap-3 justify-end">
+                  <button
+                    onClick={() => setShowConfirmFinish(false)}
+                    className="px-4 py-2.5 rounded-xl border border-slate-300 text-slate-700 font-bold text-sm"
+                  >
+                    Kembali Mengerjakan
+                  </button>
+                  <button
+                    disabled={submitting}
+                    onClick={() => submitFinalResult(answers)}
+                    className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm"
+                  >
+                    {submitting ? "Mengirim ke Server..." : "Ya, Kumpulkan Jawaban"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {showTimeUpModal && (
+            <div className="fixed inset-0 z-50 bg-slate-900/75 flex items-center justify-center p-4">
+              <div className="bg-white w-full max-w-sm rounded-2xl p-6 text-center shadow-2xl">
+                <div className="w-12 h-12 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center mx-auto mb-3">
+                  <Icon name="clock" className="w-6 h-6" />
+                </div>
+                <h3 className="text-lg font-extrabold text-slate-900 mb-1">Waktu Ujian Habis</h3>
+                <p className="text-sm text-slate-600">
+                  Seluruh jawaban Anda otomatis disimpan dan dikumpulkan ke sistem.
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    };
+
+    // =========================================================================
+    // 9. DASHBOARD PESERTA
+    // =========================================================================
+    const StudentDashboard = ({ user, config, syncStatus, onRefreshSync, onLogout }) => {
+      const [packages, setPackages] = useState([]);
+      const [questions, setQuestions] = useState([]);
+      const [results, setResults] = useState([]);
+      const [sessions, setSessions] = useState([]);
+      const [activeExam, setActiveExam] = useState(null);
+      const [latestResult, setLatestResult] = useState(null);
+      const [syncingNow, setSyncingNow] = useState(false);
+
+      const loadLocal = async () => {
+        const [pkgs, qs, res, sess] = await Promise.all([
+          AsyncDB.getAll("packages"),
+          AsyncDB.getAll("questions"),
+          AsyncDB.getAll("results"),
+          AsyncDB.getAll("sessions")
+        ]);
+        setPackages(pkgs.filter((p) => p.active));
+        setQuestions(qs);
+        setResults(res.filter((r) => String(r.userId) === String(user.id) || String(r.username) === String(user.username)));
+        setSessions(sess.filter((s) => String(s.userId) === String(user.id)));
+      };
+
+      const handleManualSync = async () => {
+        setSyncingNow(true);
+        await onRefreshSync(false);
+        await loadLocal();
+        setSyncingNow(false);
+      };
+
+      useEffect(() => { loadLocal(); }, []);
+
+      if (activeExam) {
+        const pkgQuestions = questions.filter((q) => q.packageId === activeExam.id);
+        return (
+          <TestEngine
+            user={user}
+            pkg={activeExam}
+            questions={pkgQuestions}
+            onFinishExam={(res, synced) => {
+              setActiveExam(null);
+              setLatestResult({ ...res, cloudSynced: synced });
+              loadLocal();
+            }}
+          />
+        );
+      }
+
+      return (
+        <div className="min-h-screen bg-slate-100">
+          <header className="bg-blue-800 text-white px-4 py-4 shadow">
+            <div className="max-w-5xl mx-auto flex items-center justify-between gap-4">
+              <div>
+                <p className="text-xs font-bold text-blue-200 uppercase">{config.schoolName}</p>
+                <h1 className="text-lg font-extrabold">{config.appTitle}</h1>
+              </div>
+              <div className="flex items-center gap-2 sm:gap-3">
+                <button
+                  onClick={handleManualSync}
+                  disabled={syncingNow}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-blue-700 hover:bg-blue-600 text-xs font-bold"
+                  title="Perbarui Soal dari Server"
+                >
+                  <Icon name="refresh" className={`w-4 h-4 ${syncingNow ? "animate-spin" : ""}`} />
+                  <span className="hidden sm:inline">{syncingNow ? "Menyinkronkan..." : "Perbarui Soal"}</span>
+                </button>
+                <div className="text-right hidden sm:block">
+                  <p className="text-sm font-bold">{user.name}</p>
+                  <p className="text-xs text-blue-200">NISN: {user.username} • Kelas {user.kelas || "-"}</p>
+                </div>
+                <button
+                  onClick={onLogout}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-blue-900/70 hover:bg-blue-950 text-xs font-bold"
+                >
+                  <Icon name="logout" className="w-4 h-4" />
+                  <span>Keluar</span>
+                </button>
+              </div>
+            </div>
+          </header>
+
+          <main className="max-w-5xl mx-auto p-4 sm:p-6 space-y-6">
+            {latestResult && (
+              <div className="p-5 rounded-2xl bg-emerald-600 text-white shadow-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div>
+                  <span className="text-xs font-bold uppercase tracking-wider bg-emerald-700 px-2.5 py-1 rounded-lg">
+                    {latestResult.cloudSynced ? "Terkirim ke Google Sheets" : "Tersimpan Lokal (Akan Terkirim Saat Online)"}
+                  </span>
+                  <h3 className="text-lg font-extrabold mt-2">{latestResult.packageTitle}</h3>
+                  <p className="text-sm text-emerald-100">
+                    {latestResult.packageCategory === "SURVEI"
+                      ? `Total Skor Survei: ${latestResult.score} / ${latestResult.maxScore}`
+                      : `Nilai Akhir: ${latestResult.score} (Benar: ${latestResult.correctCount}, Salah: ${latestResult.wrongCount}, Kosong: ${latestResult.blankCount})`}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setLatestResult(null)}
+                  className="px-4 py-2 rounded-xl bg-white text-emerald-700 font-bold text-xs"
+                >
+                  Tutup Info
+                </button>
+              </div>
+            )}
+
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-base font-extrabold text-slate-800">Daftar Paket Try Out & Survei Aktif</h2>
+                <span className="text-xs font-semibold text-slate-500">
+                  Status: {syncStatus === "cloud" ? "Terhubung Cloud" : "Mode Lokal"}
+                </span>
+              </div>
+
+              {packages.length === 0 ? (
+                <div className="bg-white rounded-2xl p-8 text-center text-slate-500 border border-slate-200">
+                  Belum ada paket ujian yang diaktifkan oleh Admin. Klik tombol <strong>Perbarui Soal</strong> di kanan atas jika Admin baru saja menambahkan paket.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {packages.map((pkg) => {
+                    const qCount = questions.filter((q) => q.packageId === pkg.id).length;
+                    const doneRes = results.find((r) => r.packageId === pkg.id);
+                    const ongoingSess = sessions.find((s) => s.packageId === pkg.id);
+
+                    return (
+                      <div key={pkg.id} className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm flex flex-col justify-between">
+                        <div>
+                          <div className="flex items-center justify-between gap-2 mb-2">
+                            <span className={`px-2.5 py-1 rounded-lg text-xs font-extrabold ${
+                              pkg.category === "SURVEI" ? "bg-purple-100 text-purple-700" : "bg-blue-100 text-blue-700"
+                            }`}>
+                              {pkg.category === "SURVEI" ? "SURVEI KARAKTER" : "TRY OUT TKA"}
+                            </span>
+                            <span className="text-xs font-bold text-slate-500">
+                              {qCount} Soal • {pkg.durationMinutes} Menit
+                            </span>
+                          </div>
+                          <h3 className="text-base font-extrabold text-slate-900 mb-1">{pkg.title}</h3>
+                          <p className="text-xs text-slate-500 leading-relaxed mb-4">{pkg.description}</p>
+                        </div>
+
+                        {doneRes ? (
+                          <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-between">
+                            <div>
+                              <p className="text-xs font-bold text-emerald-800">Sudah Dikerjakan</p>
+                              <p className="text-xs text-emerald-600">
+                                {pkg.category === "SURVEI" ? `Skor Total: ${doneRes.score}` : `Nilai: ${doneRes.score}`}
+                              </p>
+                            </div>
+                            <span className="px-2.5 py-1 rounded-lg bg-emerald-600 text-white text-xs font-bold">Selesai</span>
+                          </div>
+                        ) : (
+                          <button
+                            disabled={qCount === 0}
+                            onClick={() => setActiveExam(pkg)}
+                            className="w-full py-3 px-4 rounded-xl bg-blue-700 hover:bg-blue-800 disabled:bg-slate-300 text-white font-bold text-sm flex items-center justify-center gap-2 transition"
+                          >
+                            <Icon name="play" className="w-4 h-4" />
+                            <span>{ongoingSess ? "Lanjutkan Ujian" : qCount === 0 ? "Soal Belum Tersedia" : "Mulai Kerjakan"}</span>
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </main>
+        </div>
+      );
+    };
+
+    // =========================================================================
+    // 10. DASHBOARD ADMIN LENGKAP
+    // =========================================================================
+    const AdminDashboard = ({ user, config, syncStatus, onRefreshSync, onConfigUpdate, onLogout }) => {
+      const [tab, setTab] = useState("packages");
+      const [packages, setPackages] = useState([]);
+      const [questions, setQuestions] = useState([]);
+      const [users, setUsers] = useState([]);
+      const [results, setResults] = useState([]);
+      const [toast, setToast] = useState("");
+      const [syncing, setSyncing] = useState(false);
+
+      const notify = (msg) => {
+        setToast(msg);
+        setTimeout(() => setToast(""), 3800);
+      };
+
+      const refreshLocal = async () => {
+        const [pkgs, qs, us, res] = await Promise.all([
+          AsyncDB.getAll("packages"),
+          AsyncDB.getAll("questions"),
+          AsyncDB.getAll("users"),
+          AsyncDB.getAll("results")
+        ]);
+        setPackages(pkgs);
+        setQuestions(qs);
+        setUsers(us);
+        setResults(res);
+      };
+
+      const syncWithCloud = async () => {
+        setSyncing(true);
+        const r = await onRefreshSync(false);
+        await refreshLocal();
+        setSyncing(false);
+        if (r.synced) notify("Data berhasil disinkronkan dengan Google Sheets!");
+        else notify("Menggunakan penyimpanan lokal (periksa koneksi internet Anda).");
+      };
+
+      useEffect(() => { refreshLocal(); }, []);
+
+      // --- PAKET UJIAN ---
+      const [pkgForm, setPkgForm] = useState({ id: "", title: "", category: "TKA", durationMinutes: 60, shuffleQuestions: true, active: true, description: "" });
+      const [showPkgModal, setShowPkgModal] = useState(false);
+
+      const savePackage = async (e) => {
+        e.preventDefault();
+        const item = {
+          ...pkgForm,
+          id: pkgForm.id || `pkg_${Date.now()}`,
+          durationMinutes: Number(pkgForm.durationMinutes) || 60
+        };
+        setShowPkgModal(false);
+        const res = await CloudSync.saveItem("packages", item);
+        await refreshLocal();
+        notify(res.synced ? "Paket ujian tersimpan & tersinkron ke Google Sheets!" : "Paket ujian tersimpan di lokal.");
+      };
+
+      // --- BANK SOAL ---
+      const [selectedPkgId, setSelectedPkgId] = useState("");
+      useEffect(() => {
+        if (!selectedPkgId && packages.length > 0) setSelectedPkgId(packages[0].id);
+      }, [packages, selectedPkgId]);
+
+      const [showQModal, setShowQModal] = useState(false);
+      const [qForm, setQForm] = useState({
+        id: "",
+        type: "PG",
+        text: "",
+        options: ["", "", "", "", ""],
+        correctAnswer: [0],
+        matchingPairs: [{ id: "m1", left: "", right: "" }, { id: "m2", left: "", right: "" }],
+        surveyWeights: [4, 3, 2, 1],
+        image: ""
+      });
+
+      const openNewQuestion = () => {
+        const currentPkg = packages.find((p) => p.id === selectedPkgId);
+        const defaultType = currentPkg?.category === "SURVEI" ? "SURVEI" : "PG";
+        setQForm({
+          id: "",
+          type: defaultType,
+          text: "",
+          options: ["", "", "", ""],
+          correctAnswer: defaultType === "ISIAN" ? [""] : [0],
+          matchingPairs: [{ id: "m1", left: "", right: "" }, { id: "m2", left: "", right: "" }],
+          surveyWeights: [4, 3, 2, 1],
+          image: ""
+        });
+        setShowQModal(true);
+      };
+
+      const saveQuestion = async (e) => {
+        e.preventDefault();
+        if (!selectedPkgId) return;
+        const cleanOptions = qForm.options.map((o) => o.trim()).filter((o, idx) => o !== "" || idx < 4);
+        const item = {
+          ...qForm,
+          id: qForm.id || `q_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+          packageId: selectedPkgId,
+          options: ["PG", "PGK", "SURVEI"].includes(qForm.type) ? cleanOptions : [],
+          matchingPairs: qForm.type === "MENJODOHKAN" ? qForm.matchingPairs.filter((p) => p.left.trim() || p.right.trim()) : []
+        };
+        setShowQModal(false);
+        const res = await CloudSync.saveItem("questions", item);
+        await refreshLocal();
+        notify(res.synced ? "Soal tersimpan & tersinkron ke Google Sheets!" : "Soal tersimpan di lokal.");
+      };
+
+      const downloadQuestionTemplateCsv = () => {
+        const headers = ["TIPE", "PERTANYAAN", "OPSI_A", "OPSI_B", "OPSI_C", "OPSI_D", "OPSI_E", "KUNCI_JAWABAN", "BOBOT_SURVEI"];
+        const rows = [
+          ["PG", "Hasil dari \\(2\\sqrt{3} + 5\\sqrt{3}\\) adalah ....", "\\(7\\sqrt{3}\\)", "\\(7\\sqrt{6}\\)", "\\(10\\sqrt{3}\\)", "\\(10\\sqrt{9}\\)", "", "A", ""],
+          ["PGK", "Pilih dua bilangan prima di bawah ini!", "2", "4", "7", "9", "", "A|C", ""],
+          ["MENJODOHKAN", "Pasangkan negara dan ibu kotanya!", "Indonesia=Jakarta | Jepang=Tokyo | Malaysia=Kuala Lumpur", "", "", "", "", "", ""],
+          ["ISIAN", "Hasil dari \\(15 \\times 4\\) adalah ...", "", "", "", "", "", "60", ""],
+          ["SURVEI", "Saya selalu menghargai pendapat teman saat berdiskusi.", "Sangat Setuju", "Setuju", "Kurang Setuju", "Tidak Setuju", "", "", "4|3|2|1"]
+        ];
+        const csvContent = "\uFEFF" + [headers, ...rows]
+          .map((r) => r.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","))
+          .join("\n");
+        const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "Template_Soal_TKA_SMPN5_Sajira.csv";
+        a.click();
+        URL.revokeObjectURL(url);
+      };
+
+      const handleImportQuestionsCsv = (e) => {
+        const file = e.target.files?.[0];
+        if (!file || !selectedPkgId) return;
+        const reader = new FileReader();
+        reader.onload = async (ev) => {
+          const rows = parseCsvRows(ev.target.result);
+          if (rows.length <= 1) {
+            notify("File CSV kosong atau format tidak terbaca.");
+            return;
+          }
+          const imported = [];
+          for (let i = 1; i < rows.length; i++) {
+            const cols = rows[i];
+            const rawType = (cols[0] || "PG").toUpperCase().trim();
+            const type = ["PG", "PGK", "MENJODOHKAN", "ISIAN", "SURVEI"].includes(rawType) ? rawType : "PG";
+            const text = cols[1] || "";
+            if (!text.trim()) continue;
+
+            const opts = [cols[2], cols[3], cols[4], cols[5], cols[6]].map((o) => (o || "").trim()).filter(Boolean);
+            const rawKey = (cols[7] || "").trim();
+            const rawWeights = (cols[8] || "").trim();
+
+            let correctAnswer = [];
+            let matchingPairs = [];
+            let surveyWeights = [];
+
+            if (type === "PG") {
+              const idxs = parseKeyIndices(rawKey);
+              correctAnswer = [idxs.length ? idxs[0] : 0];
+            } else if (type === "PGK") {
+              correctAnswer = parseKeyIndices(rawKey);
+            } else if (type === "ISIAN") {
+              correctAnswer = rawKey.split("|").map((k) => k.trim()).filter(Boolean);
+            } else if (type === "MENJODOHKAN") {
+              const pairSource = rawKey || cols[2] || "";
+              matchingPairs = pairSource
+                .split("|")
+                .map((p, pIdx) => {
+                  const [left, right] = p.split("=");
+                  return { id: `m_${i}_${pIdx}`, left: (left || "").trim(), right: (right || "").trim() };
+                })
+                .filter((p) => p.left && p.right);
+            } else if (type === "SURVEI") {
+              surveyWeights = rawWeights
+                ? rawWeights.split(/[|,;\s]+/).map((w) => Number(w.trim()) || 0)
+                : [4, 3, 2, 1];
+            }
+
+            imported.push({
+              id: `q_csv_${Date.now()}_${i}`,
+              packageId: selectedPkgId,
+              type,
+              text,
+              options: ["PG", "PGK", "SURVEI"].includes(type) ? opts : [],
+              correctAnswer,
+              matchingPairs,
+              surveyWeights,
+              image: ""
+            });
+          }
+
+          if (imported.length > 0) {
+            notify(`Mengunggah ${imported.length} soal...`);
+            const res = await CloudSync.saveBulk("questions", imported);
+            await refreshLocal();
+            notify(res.synced ? `${imported.length} soal berhasil diimpor & tersinkron ke Google Sheets!` : `${imported.length} soal tersimpan di lokal.`);
+          } else {
+            notify("Tidak ada baris soal valid yang ditemukan.");
+          }
+          e.target.value = "";
+        };
+        reader.readAsText(file);
+      };
+
+      // --- PESERTA ---
+      const [userForm, setUserForm] = useState({ id: "", username: "", password: "123", name: "", kelas: "IX-A", role: "student" });
+      const [showUserModal, setShowUserModal] = useState(false);
+
+      const saveUser = async (e) => {
+        e.preventDefault();
+        setShowUserModal(false);
+        const res = await CloudSync.saveItem("users", {
+          ...userForm,
+          id: userForm.id || `usr_${Date.now()}`
+        });
+        await refreshLocal();
+        notify(res.synced ? "Data pengguna tersimpan & tersinkron ke Google Sheets!" : "Data pengguna tersimpan di lokal.");
+      };
+
+      const handleImportUsersCsv = (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = async (ev) => {
+          const rows = parseCsvRows(ev.target.result);
+          const imported = [];
+          for (let i = 1; i < rows.length; i++) {
+            const [nisn, nama, kelas, pass] = rows[i];
+            if (!nisn || !nama) continue;
+            imported.push({
+              id: `stu_${nisn.trim()}`,
+              username: nisn.trim(),
+              name: nama.trim(),
+              kelas: (kelas || "IX-A").trim(),
+              password: (pass || "123").trim(),
+              role: "student"
+            });
+          }
+          if (imported.length > 0) {
+            notify(`Mengunggah ${imported.length} peserta...`);
+            const res = await CloudSync.saveBulk("users", imported);
+            await refreshLocal();
+            notify(res.synced ? `${imported.length} peserta diimpor & tersinkron ke Google Sheets!` : `${imported.length} peserta tersimpan di lokal.`);
+          }
+          e.target.value = "";
+        };
+        reader.readAsText(file);
+      };
+
+      // --- HASIL & ANALISIS ---
+      const [filterResPkg, setFilterResPkg] = useState("ALL");
+      const [detailModalResult, setDetailModalResult] = useState(null);
+
+      const filteredResults = useMemo(() => {
+        if (filterResPkg === "ALL") return results;
+        return results.filter((r) => r.packageId === filterResPkg);
+      }, [results, filterResPkg]);
+
+      const exportResultsDetailCsv = () => {
+        if (filteredResults.length === 0) {
+          notify("Belum ada data hasil ujian untuk diekspor.");
+          return;
+        }
+        const maxQ = Math.max(...filteredResults.map((r) => (r.details || []).length), 0);
+        const qHeaders = Array.from({ length: maxQ }, (_, i) => `No_${i + 1}`);
+        const headers = ["NISN", "Nama_Peserta", "Kelas", "Paket_Ujian", "Kategori", "Skor_Nilai", "Benar", "Salah", "Kosong", "Waktu_Selesai", ...qHeaders];
+
+        const rows = filteredResults.map((r) => {
+          const perQ = Array.from({ length: maxQ }, (_, idx) => {
+            const d = (r.details || [])[idx];
+            return d ? `${d.status} [${d.studentAnswerText}]` : "-";
+          });
+          return [
+            r.username,
+            r.userName,
+            r.kelas,
+            r.packageTitle,
+            r.packageCategory,
+            r.score,
+            r.correctCount,
+            r.wrongCount,
+            r.blankCount,
+            new Date(r.submittedAt).toLocaleString("id-ID"),
+            ...perQ
+          ];
+        });
+
+        const csvContent = "\uFEFF" + [headers, ...rows]
+          .map((row) => row.map((c) => `"${String(c ?? "").replace(/"/g, '""')}"`).join(","))
+          .join("\n");
+        const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `Rekap_Detail_Hasil_${new Date().toISOString().slice(0, 10)}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+      };
+
+      // --- PENGATURAN & KONEKSI GOOGLE SHEETS ---
+      const [cfgForm, setCfgForm] = useState({
+        schoolName: config.schoolName || "SMP NEGERI 5 SAJIRA",
+        appTitle: config.appTitle || "TRY OUT TKA SMP",
+        adminUsername: user.username,
+        adminPassword: user.password,
+        gasUrl: getGasUrl()
+      });
+
+      const saveSettings = async (e) => {
+        e.preventDefault();
+        setGasUrlStorage(cfgForm.gasUrl);
+        const newCfg = { id: "app_config", schoolName: cfgForm.schoolName, appTitle: cfgForm.appTitle };
+        await CloudSync.saveItem("settings", newCfg);
+        await CloudSync.saveItem("users", { ...user, username: cfgForm.adminUsername, password: cfgForm.adminPassword });
+        onConfigUpdate(newCfg);
+        if (cfgForm.gasUrl) {
+          await syncWithCloud();
+        } else {
+          notify("Pengaturan lokal berhasil disimpan.");
+        }
+      };
+
+      const pushAllLocalToCloud = async () => {
+        if (!getGasUrl()) {
+          notify("Masukkan URL Web App Google Apps Script terlebih dahulu.");
+          return;
+        }
+        setSyncing(true);
+        const [u, p, q, r, s] = await Promise.all([
+          AsyncDB.getAll("users"),
+          AsyncDB.getAll("packages"),
+          AsyncDB.getAll("questions"),
+          AsyncDB.getAll("results"),
+          AsyncDB.getAll("settings")
+        ]);
+        await Promise.all([
+          u.length ? CloudSync.saveBulk("users", u) : Promise.resolve(),
+          p.length ? CloudSync.saveBulk("packages", p) : Promise.resolve(),
+          q.length ? CloudSync.saveBulk("questions", q) : Promise.resolve(),
+          r.length ? CloudSync.saveBulk("results", r) : Promise.resolve(),
+          s.length ? CloudSync.saveBulk("settings", s) : Promise.resolve()
+        ]);
+        await syncWithCloud();
+        setSyncing(false);
+        notify("Seluruh data lokal berhasil diunggah ke Google Sheets!");
+      };
+
+      const filteredQuestions = questions.filter((q) => q.packageId === selectedPkgId);
+
+      return (
+        <div className="min-h-screen bg-slate-100 flex flex-col">
+          <header className="bg-slate-900 text-white px-4 py-3.5 shadow-md">
+            <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
+              <div>
+                <p className="text-[11px] font-bold tracking-wider uppercase text-blue-400">{config.schoolName}</p>
+                <h1 className="text-base sm:text-lg font-extrabold">{config.appTitle} — Panel Admin</h1>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={syncWithCloud}
+                  disabled={syncing}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-blue-700 hover:bg-blue-600 text-xs font-bold transition"
+                >
+                  <Icon name="refresh" className={`w-4 h-4 ${syncing ? "animate-spin" : ""}`} />
+                  <span className="hidden sm:inline">{syncing ? "Menyinkronkan..." : "Sinkronkan Cloud"}</span>
+                </button>
+                <button
+                  onClick={onLogout}
+                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-red-600 text-xs font-bold transition"
+                >
+                  <Icon name="logout" className="w-4 h-4" />
+                  <span>Keluar</span>
+                </button>
+              </div>
+            </div>
+          </header>
+
+          {toast && (
+            <div className="fixed bottom-5 right-5 z-50 px-4 py-3 rounded-xl bg-slate-900 text-white text-sm font-semibold shadow-xl border border-slate-700">
+              {toast}
+            </div>
+          )}
+
+          <div className="bg-white border-b border-slate-200 px-4 overflow-x-auto">
+            <div className="max-w-7xl mx-auto flex gap-1 sm:gap-2">
+              {[
+                { id: "packages", label: "Paket Ujian", icon: "folder" },
+                { id: "questions", label: "Bank Soal", icon: "book" },
+                { id: "users", label: "Peserta & Admin", icon: "users" },
+                { id: "results", label: "Hasil & Analisis", icon: "chart" },
+                { id: "settings", label: "Pengaturan & Cloud", icon: "settings" }
+              ].map((t) => (
+                <button
+                  key={t.id}
+                  onClick={() => setTab(t.id)}
+                  className={`flex items-center gap-2 px-4 py-3.5 text-xs sm:text-sm font-bold border-b-2 whitespace-nowrap transition ${
+                    tab === t.id
+                      ? "border-blue-700 text-blue-700"
+                      : "border-transparent text-slate-500 hover:text-slate-800"
+                  }`}
+                >
+                  <Icon name={t.icon} className="w-4 h-4" />
+                  <span>{t.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6">
+            {/* TAB 1: PAKET UJIAN */}
+            {tab === "packages" && (
+              <div className="space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <h2 className="text-lg font-extrabold text-slate-900">Manajemen Paket Ujian & Survei</h2>
+                  <button
+                    onClick={() => {
+                      setPkgForm({ id: "", title: "", category: "TKA", durationMinutes: 60, shuffleQuestions: true, active: true, description: "" });
+                      setShowPkgModal(true);
+                    }}
+                    className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-blue-700 hover:bg-blue-800 text-white text-xs font-bold"
+                  >
+                    <Icon name="plus" className="w-4 h-4" />
+                    <span>Tambah Paket Baru</span>
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {packages.map((p) => {
+                    const count = questions.filter((q) => q.packageId === p.id).length;
+                    return (
+                      <div key={p.id} className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm flex flex-col justify-between">
+                        <div>
+                          <div className="flex items-center justify-between gap-2 mb-2">
+                            <span className={`px-2.5 py-1 rounded-lg text-xs font-extrabold ${p.category === "SURVEI" ? "bg-purple-100 text-purple-700" : "bg-blue-100 text-blue-700"}`}>
+                              {p.category}
+                            </span>
+                            <span className={`px-2.5 py-1 rounded-lg text-xs font-bold ${p.active ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>
+                              {p.active ? "Aktif" : "Nonaktif"}
+                            </span>
+                          </div>
+                          <h3 className="text-base font-extrabold text-slate-900">{p.title}</h3>
+                          <p className="text-xs text-slate-500 mt-1 mb-3">{p.description}</p>
+                          <p className="text-xs font-bold text-slate-700">
+                            Jumlah Soal: {count} • Durasi: {p.durationMinutes} Menit • Acak Soal: {p.shuffleQuestions ? "Ya" : "Tidak"}
+                          </p>
+                        </div>
+
+                        <div className="mt-4 pt-3 border-t border-slate-100 flex items-center gap-2">
+                          <button
+                            onClick={() => { setSelectedPkgId(p.id); setTab("questions"); }}
+                            className="flex-1 py-2 px-3 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold"
+                          >
+                            Kelola Soal ({count})
+                          </button>
+                          <button
+                            onClick={() => { setPkgForm(p); setShowPkgModal(true); }}
+                            className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700"
+                          >
+                            <Icon name="edit" className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={async () => {
+                              await CloudSync.removeItem("packages", p.id);
+                              await refreshLocal();
+                              notify("Paket ujian dihapus.");
+                            }}
+                            className="p-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-600"
+                          >
+                            <Icon name="trash" className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* TAB 2: BANK SOAL */}
+            {tab === "questions" && (
+              <div className="space-y-4">
+                <div className="bg-white rounded-2xl p-4 border border-slate-200 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                    <label className="text-xs font-extrabold uppercase text-slate-500">Pilih Paket:</label>
+                    <select
+                      value={selectedPkgId}
+                      onChange={(e) => setSelectedPkgId(e.target.value)}
+                      className="px-3.5 py-2 rounded-xl border border-slate-300 text-sm font-bold text-slate-800 bg-slate-50"
+                    >
+                      {packages.map((p) => (
+                        <option key={p.id} value={p.id}>{p.title} ({p.category})</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      onClick={downloadQuestionTemplateCsv}
+                      className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold"
+                    >
+                      <Icon name="download" className="w-4 h-4" />
+                      <span>Template CSV</span>
+                    </button>
+
+                    <label className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-bold cursor-pointer">
+                      <Icon name="upload" className="w-4 h-4" />
+                      <span>Impor CSV</span>
+                      <input type="file" accept=".csv" onChange={handleImportQuestionsCsv} className="hidden" />
+                    </label>
+
+                    <button
+                      onClick={openNewQuestion}
+                      className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-700 hover:bg-blue-800 text-white text-xs font-bold"
+                    >
+                      <Icon name="plus" className="w-4 h-4" />
+                      <span>Tambah Soal</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  {filteredQuestions.length === 0 ? (
+                    <div className="bg-white rounded-2xl p-8 text-center text-slate-500 border border-slate-200">
+                      Belum ada soal pada paket ini.
+                    </div>
+                  ) : (
+                    filteredQuestions.map((q, idx) => (
+                      <div key={q.id} className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm">
+                        <div className="flex items-start justify-between gap-3 mb-2">
+                          <div className="flex items-center gap-2">
+                            <span className="px-2.5 py-1 rounded-lg bg-slate-900 text-white text-xs font-extrabold">No. {idx + 1}</span>
+                            <span className="px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 text-xs font-bold">{q.type}</span>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              onClick={() => {
+                                setQForm({
+                                  ...q,
+                                  options: q.options && q.options.length ? [...q.options] : ["", "", "", ""],
+                                  matchingPairs: q.matchingPairs && q.matchingPairs.length ? [...q.matchingPairs] : [{ id: "m1", left: "", right: "" }],
+                                  surveyWeights: q.surveyWeights && q.surveyWeights.length ? [...q.surveyWeights] : [4, 3, 2, 1]
+                                });
+                                setShowQModal(true);
+                              }}
+                              className="p-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700"
+                            >
+                              <Icon name="edit" className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={async () => {
+                                await CloudSync.removeItem("questions", q.id);
+                                await refreshLocal();
+                                notify("Soal dihapus.");
+                              }}
+                              className="p-2 rounded-lg bg-red-50 hover:bg-red-100 text-red-600"
+                            >
+                              <Icon name="trash" className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+
+                        {q.image && <img src={q.image} alt="" className="max-h-40 rounded-lg mb-3 border" />}
+                        <div className="text-sm text-slate-800 whitespace-pre-line mb-3">
+                          <MathText text={q.text} />
+                        </div>
+
+                        {(q.type === "PG" || q.type === "PGK" || q.type === "SURVEI") && (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                            {(q.options || []).map((opt, oIdx) => {
+                              const isKey = (q.correctAnswer || []).includes(oIdx);
+                              return (
+                                <div key={oIdx} className={`p-2.5 rounded-lg border ${isKey ? "bg-emerald-50 border-emerald-300 font-bold text-emerald-900" : "bg-slate-50 border-slate-200 text-slate-700"}`}>
+                                  <span className="mr-1.5 font-extrabold">{String.fromCharCode(65 + oIdx)}.</span>
+                                  <MathText text={opt} />
+                                  {q.type === "SURVEI" && (
+                                    <span className="ml-2 text-purple-700 font-bold">(Skor: {(q.surveyWeights || [])[oIdx] ?? 0})</span>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+
+                        {q.type === "MENJODOHKAN" && (
+                          <div className="space-y-1.5 text-xs">
+                            {(q.matchingPairs || []).map((p, pIdx) => (
+                              <div key={pIdx} className="p-2 rounded-lg bg-slate-50 border border-slate-200 flex items-center gap-2">
+                                <MathText text={p.left} />
+                                <span className="font-bold text-blue-600">→</span>
+                                <MathText text={p.right} />
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {q.type === "ISIAN" && (
+                          <div className="text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-2 rounded-lg inline-block">
+                            Kunci Jawaban: {(q.correctAnswer || []).join(" / ")}
+                          </div>
+                        )}
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* TAB 3: PESERTA & ADMIN */}
+            {tab === "users" && (
+              <div className="space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <h2 className="text-lg font-extrabold text-slate-900">Daftar Peserta & Pengelola</h2>
+                  <div className="flex flex-wrap gap-2">
+                    <label className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold cursor-pointer">
+                      <Icon name="upload" className="w-4 h-4" />
+                      <span>Impor Peserta CSV (NISN,Nama,Kelas,Password)</span>
+                      <input type="file" accept=".csv" onChange={handleImportUsersCsv} className="hidden" />
+                    </label>
+                    <button
+                      onClick={() => {
+                        setUserForm({ id: "", username: "", password: "123", name: "", kelas: "IX-A", role: "student" });
+                        setShowUserModal(true);
+                      }}
+                      className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-blue-700 hover:bg-blue-800 text-white text-xs font-bold"
+                    >
+                      <Icon name="plus" className="w-4 h-4" />
+                      <span>Tambah Pengguna</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-2xl border border-slate-200 overflow-x-auto shadow-sm">
+                  <table className="w-full text-left border-collapse text-sm">
+                    <thead>
+                      <tr className="bg-slate-50 border-b border-slate-200 text-xs uppercase text-slate-500">
+                        <th className="p-3.5">NISN / Username</th>
+                        <th className="p-3.5">Nama Lengkap</th>
+                        <th className="p-3.5">Kelas</th>
+                        <th className="p-3.5">Peran</th>
+                        <th className="p-3.5">Password</th>
+                        <th className="p-3.5 text-right">Aksi</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {users.map((u) => (
+                        <tr key={u.id} className="hover:bg-slate-50">
+                          <td className="p-3.5 font-mono font-bold text-slate-800">{u.username}</td>
+                          <td className="p-3.5 font-semibold text-slate-900">{u.name}</td>
+                          <td className="p-3.5 text-slate-600">{u.kelas || "-"}</td>
+                          <td className="p-3.5">
+                            <span className={`px-2 py-0.5 rounded text-xs font-bold ${u.role === "admin" ? "bg-amber-100 text-amber-800" : "bg-blue-100 text-blue-700"}`}>
+                              {u.role === "admin" ? "Admin" : "Peserta"}
+                            </span>
+                          </td>
+                          <td className="p-3.5 font-mono text-xs text-slate-500">{u.password}</td>
+                          <td className="p-3.5 text-right space-x-1">
+                            <button
+                              onClick={() => { setUserForm(u); setShowUserModal(true); }}
+                              className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700"
+                            >
+                              <Icon name="edit" className="w-4 h-4" />
+                            </button>
+                            {u.id !== user.id && (
+                              <button
+                                onClick={async () => {
+                                  await CloudSync.removeItem("users", u.id);
+                                  await refreshLocal();
+                                  notify("Pengguna dihapus.");
+                                }}
+                                className="p-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600"
+                              >
+                                <Icon name="trash" className="w-4 h-4" />
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* TAB 4: HASIL & ANALISIS */}
+            {tab === "results" && (
+              <div className="space-y-4">
+                <div className="bg-white rounded-2xl p-4 border border-slate-200 flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <label className="text-xs font-extrabold uppercase text-slate-500">Filter Paket:</label>
+                    <select
+                      value={filterResPkg}
+                      onChange={(e) => setFilterResPkg(e.target.value)}
+                      className="px-3.5 py-2 rounded-xl border border-slate-300 text-sm font-bold text-slate-800 bg-slate-50"
+                    >
+                      <option value="ALL">Semua Paket Ujian</option>
+                      {packages.map((p) => (
+                        <option key={p.id} value={p.id}>{p.title}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={syncWithCloud}
+                      disabled={syncing}
+                      className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold"
+                    >
+                      <Icon name="refresh" className={`w-4 h-4 ${syncing ? "animate-spin" : ""}`} />
+                      <span>Tarik Nilai Terbaru</span>
+                    </button>
+                    <button
+                      onClick={exportResultsDetailCsv}
+                      className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm"
+                    >
+                      <Icon name="download" className="w-4 h-4" />
+                      <span>Ekspor CSV Detail</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-2xl border border-slate-200 overflow-x-auto shadow-sm">
+                  <table className="w-full text-left border-collapse text-sm">
+                    <thead>
+                      <tr className="bg-slate-50 border-b border-slate-200 text-xs uppercase text-slate-500">
+                        <th className="p-3.5">Peserta</th>
+                        <th className="p-3.5">Kelas</th>
+                        <th className="p-3.5">Paket Ujian</th>
+                        <th className="p-3.5">Rincian</th>
+                        <th className="p-3.5">Nilai / Skor Total</th>
+                        <th className="p-3.5 text-right">Analisis</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {filteredResults.length === 0 ? (
+                        <tr>
+                          <td colSpan="6" className="p-8 text-center text-slate-500">
+                            Belum ada hasil ujian yang masuk.
+                          </td>
+                        </tr>
+                      ) : (
+                        filteredResults.map((r) => (
+                          <tr key={r.id} className="hover:bg-slate-50">
+                            <td className="p-3.5">
+                              <p className="font-bold text-slate-900">{r.userName}</p>
+                              <p className="text-xs font-mono text-slate-500">{r.username}</p>
+                            </td>
+                            <td className="p-3.5 text-slate-700 font-semibold">{r.kelas}</td>
+                            <td className="p-3.5">
+                              <p className="font-semibold text-slate-800">{r.packageTitle}</p>
+                              <span className="text-[11px] font-bold text-slate-400">
+                                {new Date(r.submittedAt).toLocaleString("id-ID")}
+                              </span>
+                            </td>
+                            <td className="p-3.5 text-xs">
+                              {r.packageCategory === "SURVEI" ? (
+                                <span className="text-purple-700 font-bold">
+                                  Terjawab: {r.correctCount}/{r.totalQuestions} Butir
+                                </span>
+                              ) : (
+                                <span className="font-semibold text-slate-600">
+                                  B: <strong className="text-emerald-600">{r.correctCount}</strong> •
+                                  S: <strong className="text-red-600">{r.wrongCount}</strong> •
+                                  K: <strong>{r.blankCount}</strong>
+                                </span>
+                              )}
+                            </td>
+                            <td className="p-3.5">
+                              <span className={`px-3 py-1 rounded-lg text-sm font-extrabold ${
+                                r.packageCategory === "SURVEI"
+                                  ? "bg-purple-100 text-purple-800"
+                                  : "bg-blue-100 text-blue-800"
+                              }`}>
+                                {r.packageCategory === "SURVEI" ? `${r.score} / ${r.maxScore}` : r.score}
+                              </span>
+                            </td>
+                            <td className="p-3.5 text-right space-x-1.5">
+                              <button
+                                onClick={() => setDetailModalResult(r)}
+                                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold"
+                              >
+                                <Icon name="eye" className="w-3.5 h-3.5" />
+                                <span>Detail</span>
+                              </button>
+                              <button
+                                onClick={async () => {
+                                  await CloudSync.removeItem("results", r.id);
+                                  await refreshLocal();
+                                  notify("Data hasil dihapus.");
+                                }}
+                                className="p-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600"
+                              >
+                                <Icon name="trash" className="w-4 h-4" />
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* TAB 5: PENGATURAN & SINKRONISASI GOOGLE SHEETS */}
+            {tab === "settings" && (
+              <div className="max-w-2xl space-y-5">
+                <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-5">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-lg font-extrabold text-slate-900">Pengaturan Identitas & Koneksi Google Sheets</h2>
+                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${syncStatus === "cloud" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-800"}`}>
+                      {syncStatus === "cloud" ? "Terhubung Google Sheets" : "Mode Lokal"}
+                    </span>
+                  </div>
+
+                  <form onSubmit={saveSettings} className="space-y-4">
+                    <div className="p-4 rounded-xl bg-blue-50 border border-blue-200 space-y-2">
+                      <label className="block text-xs font-extrabold uppercase text-blue-900">
+                        URL Web App Google Apps Script (/exec)
+                      </label>
+                      <input
+                        type="url"
+                        placeholder="https://script.google.com/macros/s/.../exec"
+                        value={cfgForm.gasUrl}
+                        onChange={(e) => setCfgForm({ ...cfgForm, gasUrl: e.target.value })}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-blue-300 bg-white text-xs font-mono"
+                      />
+                      <p className="text-[11px] text-blue-800">
+                        URL Web App sudah terpasang secara bawaan di aplikasi ini sehingga semua perangkat otomatis tersinkronisasi.
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold uppercase text-slate-600 mb-1">Nama Sekolah</label>
+                      <input
+                        type="text"
+                        required
+                        value={cfgForm.schoolName}
+                        onChange={(e) => setCfgForm({ ...cfgForm, schoolName: e.target.value })}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-semibold"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold uppercase text-slate-600 mb-1">Judul Aplikasi</label>
+                      <input
+                        type="text"
+                        required
+                        value={cfgForm.appTitle}
+                        onChange={(e) => setCfgForm({ ...cfgForm, appTitle: e.target.value })}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-semibold"
+                      />
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-bold uppercase text-slate-600 mb-1">Username Admin</label>
+                        <input
+                          type="text"
+                          required
+                          value={cfgForm.adminUsername}
+                          onChange={(e) => setCfgForm({ ...cfgForm, adminUsername: e.target.value })}
+                          className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-semibold"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold uppercase text-slate-600 mb-1">Password Admin</label>
+                        <input
+                          type="text"
+                          required
+                          value={cfgForm.adminPassword}
+                          onChange={(e) => setCfgForm({ ...cfgForm, adminPassword: e.target.value })}
+                          className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-semibold"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-3 pt-2">
+                      <button
+                        type="submit"
+                        className="px-5 py-2.5 rounded-xl bg-blue-700 hover:bg-blue-800 text-white text-sm font-bold"
+                      >
+                        Simpan & Hubungkan
+                      </button>
+                      <button
+                        type="button"
+                        disabled={syncing}
+                        onClick={pushAllLocalToCloud}
+                        className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold"
+                      >
+                        {syncing ? "Mengunggah..." : "Unggah Semua Data Lokal ke Google Sheets"}
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )}
+          </main>
+
+          {/* MODAL TAMBAH / EDIT PAKET UJIAN */}
+          {showPkgModal && (
+            <div className="fixed inset-0 z-50 bg-slate-900/60 flex items-center justify-center p-4">
+              <form onSubmit={savePackage} className="bg-white w-full max-w-lg rounded-2xl p-6 shadow-2xl space-y-4">
+                <h3 className="text-lg font-extrabold text-slate-900">{pkgForm.id ? "Edit Paket Ujian" : "Tambah Paket Ujian"}</h3>
+                <div>
+                  <label className="block text-xs font-bold uppercase text-slate-600 mb-1">Nama Paket</label>
+                  <input type="text" required value={pkgForm.title} onChange={(e) => setPkgForm({ ...pkgForm, title: e.target.value })} className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm" />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold uppercase text-slate-600 mb-1">Kategori</label>
+                    <select value={pkgForm.category} onChange={(e) => setPkgForm({ ...pkgForm, category: e.target.value })} className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-bold">
+                      <option value="TKA">TKA (Akademik)</option>
+                      <option value="SURVEI">SURVEI (Karakter / SULINGJAR)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold uppercase text-slate-600 mb-1">Durasi (Menit)</label>
+                    <input type="number" min="1" required value={pkgForm.durationMinutes} onChange={(e) => setPkgForm({ ...pkgForm, durationMinutes: e.target.value })} className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm" />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase text-slate-600 mb-1">Deskripsi Singkat</label>
+                  <textarea rows="2" value={pkgForm.description} onChange={(e) => setPkgForm({ ...pkgForm, description: e.target.value })} className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm" />
+                </div>
+                <div className="flex items-center gap-6 text-sm font-semibold">
+                  <label className="flex items-center gap-2">
+                    <input type="checkbox" checked={pkgForm.shuffleQuestions} onChange={(e) => setPkgForm({ ...pkgForm, shuffleQuestions: e.target.checked })} />
+                    <span>Acak Urutan Soal</span>
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input type="checkbox" checked={pkgForm.active} onChange={(e) => setPkgForm({ ...pkgForm, active: e.target.checked })} />
+                    <span>Aktifkan Paket</span>
+                  </label>
+                </div>
+                <div className="flex justify-end gap-2 pt-2">
+                  <button type="button" onClick={() => setShowPkgModal(false)} className="px-4 py-2 rounded-xl border border-slate-300 text-sm font-bold">Batal</button>
+                  <button type="submit" className="px-5 py-2 rounded-xl bg-blue-700 text-white text-sm font-bold">Simpan Paket</button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {/* MODAL TAMBAH / EDIT SOAL */}
+          {showQModal && (
+            <div className="fixed inset-0 z-50 bg-slate-900/60 flex items-center justify-center p-4 overflow-y-auto">
+              <form onSubmit={saveQuestion} className="bg-white w-full max-w-2xl rounded-2xl p-6 shadow-2xl space-y-4 my-8 max-h-[90vh] overflow-y-auto">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-extrabold text-slate-900">{qForm.id ? "Edit Soal" : "Tambah Soal Baru"}</h3>
+                  <button type="button" onClick={() => setShowQModal(false)} className="p-1.5 rounded-lg bg-slate-100">
+                    <Icon name="x" className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold uppercase text-slate-600 mb-1">Bentuk Soal</label>
+                  <select
+                    value={qForm.type}
+                    onChange={(e) => {
+                      const t = e.target.value;
+                      setQForm({
+                        ...qForm,
+                        type: t,
+                        correctAnswer: t === "ISIAN" ? [""] : t === "PGK" ? [0, 1] : [0]
+                      });
+                    }}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-bold"
+                  >
+                    <option value="PG">Pilihan Ganda (PG)</option>
+                    <option value="PGK">Pilihan Ganda Kompleks (PGK)</option>
+                    <option value="MENJODOHKAN">Menjodohkan</option>
+                    <option value="ISIAN">Isian Singkat</option>
+                    <option value="SURVEI">Survei Karakter / SULINGJAR</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold uppercase text-slate-600 mb-1">
+                    Teks Pertanyaan (Gunakan \( ... \) atau $ ... $ untuk rumus matematika)
+                  </label>
+                  <textarea
+                    rows="4"
+                    required
+                    value={qForm.text}
+                    onChange={(e) => setQForm({ ...qForm, text: e.target.value })}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold uppercase text-slate-600 mb-1">Gambar Soal (Opsional - Unggah File atau URL)</label>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <input
+                      type="text"
+                      placeholder="Tempel link URL gambar..."
+                      value={qForm.image}
+                      onChange={(e) => setQForm({ ...qForm, image: e.target.value })}
+                      className="flex-1 px-3 py-2 rounded-xl border border-slate-300 text-xs"
+                    />
+                    <label className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-bold cursor-pointer text-center">
+                      Unggah Gambar Perangkat
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={async (e) => {
+                          const f = e.target.files?.[0];
+                          if (!f) return;
+                          const compressed = await compressImageToDataUrl(f);
+                          setQForm({ ...qForm, image: compressed });
+                        }}
+                      />
+                    </label>
+                  </div>
+                </div>
+
+                {(qForm.type === "PG" || qForm.type === "PGK" || qForm.type === "SURVEI") && (
+                  <div className="space-y-2">
+                    <label className="block text-xs font-bold uppercase text-slate-600">
+                      Pilihan Jawaban {qForm.type === "SURVEI" ? "& Bobot Skor" : "& Kunci Jawaban"}
+                    </label>
+                    {qForm.options.map((opt, idx) => (
+                      <div key={idx} className="flex items-center gap-2">
+                        {qForm.type !== "SURVEI" && (
+                          <input
+                            type={qForm.type === "PG" ? "radio" : "checkbox"}
+                            name="correctKey"
+                            checked={(qForm.correctAnswer || []).includes(idx)}
+                            onChange={() => {
+                              if (qForm.type === "PG") setQForm({ ...qForm, correctAnswer: [idx] });
+                              else {
+                                const cur = qForm.correctAnswer || [];
+                                const next = cur.includes(idx) ? cur.filter((i) => i !== idx) : [...cur, idx];
+                                setQForm({ ...qForm, correctAnswer: next });
+                              }
+                            }}
+                          />
+                        )}
+                        <span className="w-6 text-xs font-extrabold">{String.fromCharCode(65 + idx)}.</span>
+                        <input
+                          type="text"
+                          value={opt}
+                          onChange={(e) => {
+                            const nextOpts = [...qForm.options];
+                            nextOpts[idx] = e.target.value;
+                            setQForm({ ...qForm, options: nextOpts });
+                          }}
+                          placeholder={`Isi opsi ${String.fromCharCode(65 + idx)}`}
+                          className="flex-1 px-3 py-2 rounded-xl border border-slate-300 text-sm"
+                        />
+                        {qForm.type === "SURVEI" && (
+                          <input
+                            type="number"
+                            value={(qForm.surveyWeights || [])[idx] ?? 0}
+                            onChange={(e) => {
+                              const nextW = [...(qForm.surveyWeights || [4, 3, 2, 1])];
+                              nextW[idx] = Number(e.target.value);
+                              setQForm({ ...qForm, surveyWeights: nextW });
+                            }}
+                            className="w-16 px-2 py-2 rounded-xl border border-slate-300 text-xs font-bold text-center"
+                            title="Skor Opsi"
+                          />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {qForm.type === "MENJODOHKAN" && (
+                  <div className="space-y-2">
+                    <label className="block text-xs font-bold uppercase text-slate-600">Pasangan Pernyataan (Kiri) & Jawaban (Kanan)</label>
+                    {qForm.matchingPairs.map((pair, idx) => (
+                      <div key={idx} className="grid grid-cols-2 gap-2">
+                        <input
+                          type="text"
+                          placeholder={`Pernyataan Kiri ${idx + 1}`}
+                          value={pair.left}
+                          onChange={(e) => {
+                            const next = [...qForm.matchingPairs];
+                            next[idx] = { ...next[idx], left: e.target.value };
+                            setQForm({ ...qForm, matchingPairs: next });
+                          }}
+                          className="px-3 py-2 rounded-xl border border-slate-300 text-sm"
+                        />
+                        <input
+                          type="text"
+                          placeholder={`Pasangan Kanan ${idx + 1}`}
+                          value={pair.right}
+                          onChange={(e) => {
+                            const next = [...qForm.matchingPairs];
+                            next[idx] = { ...next[idx], right: e.target.value };
+                            setQForm({ ...qForm, matchingPairs: next });
+                          }}
+                          className="px-3 py-2 rounded-xl border border-slate-300 text-sm"
+                        />
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => setQForm({
+                        ...qForm,
+                        matchingPairs: [...qForm.matchingPairs, { id: `m_${Date.now()}`, left: "", right: "" }]
+                      })}
+                      className="text-xs font-bold text-blue-700 hover:underline"
+                    >
+                      + Tambah Baris Pasangan
+                    </button>
+                  </div>
+                )}
+
+                {qForm.type === "ISIAN" && (
+                  <div>
+                    <label className="block text-xs font-bold uppercase text-slate-600 mb-1">Kunci Jawaban Singkat</label>
+                    <input
+                      type="text"
+                      required
+                      value={(qForm.correctAnswer || [])[0] || ""}
+                      onChange={(e) => setQForm({ ...qForm, correctAnswer: [e.target.value] })}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-bold"
+                    />
+                  </div>
+                )}
+
+                <div className="flex justify-end gap-2 pt-3 border-t">
+                  <button type="button" onClick={() => setShowQModal(false)} className="px-4 py-2 rounded-xl border border-slate-300 text-sm font-bold">Batal</button>
+                  <button type="submit" className="px-5 py-2 rounded-xl bg-blue-700 text-white text-sm font-bold">Simpan Soal</button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {/* MODAL TAMBAH / EDIT PENGGUNA */}
+          {showUserModal && (
+            <div className="fixed inset-0 z-50 bg-slate-900/60 flex items-center justify-center p-4">
+              <form onSubmit={saveUser} className="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl space-y-4">
+                <h3 className="text-lg font-extrabold text-slate-900">{userForm.id ? "Edit Pengguna" : "Tambah Pengguna"}</h3>
+                <div>
+                  <label className="block text-xs font-bold uppercase text-slate-600 mb-1">NISN / Username</label>
+                  <input type="text" required value={userForm.username} onChange={(e) => setUserForm({ ...userForm, username: e.target.value })} className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase text-slate-600 mb-1">Nama Lengkap</label>
+                  <input type="text" required value={userForm.name} onChange={(e) => setUserForm({ ...userForm, name: e.target.value })} className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm" />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold uppercase text-slate-600 mb-1">Kelas</label>
+                    <input type="text" value={userForm.kelas} onChange={(e) => setUserForm({ ...userForm, kelas: e.target.value })} className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold uppercase text-slate-600 mb-1">Password</label>
+                    <input type="text" required value={userForm.password} onChange={(e) => setUserForm({ ...userForm, password: e.target.value })} className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm" />
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2 pt-2">
+                  <button type="button" onClick={() => setShowUserModal(false)} className="px-4 py-2 rounded-xl border border-slate-300 text-sm font-bold">Batal</button>
+                  <button type="submit" className="px-5 py-2 rounded-xl bg-blue-700 text-white text-sm font-bold">Simpan</button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {/* MODAL DETAIL ANALISIS HASIL PESERTA (TANPA TOMBOL CETAK) */}
+          {detailModalResult && (
+            <div className="fixed inset-0 z-50 bg-slate-900/60 flex items-center justify-center p-4">
+              <div className="bg-white w-full max-w-3xl rounded-2xl p-6 shadow-2xl max-h-[88vh] flex flex-col">
+                <div className="flex items-start justify-between gap-3 pb-4 border-b border-slate-200">
+                  <div>
+                    <h3 className="text-lg font-extrabold text-slate-900">Detail Analisis Jawaban Peserta</h3>
+                    <p className="text-xs text-slate-600 mt-0.5">
+                      <strong>{detailModalResult.userName}</strong> ({detailModalResult.kelas}) — {detailModalResult.packageTitle}
+                    </p>
+                  </div>
+                  <button onClick={() => setDetailModalResult(null)} className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200">
+                    <Icon name="x" className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <div className="flex-1 overflow-y-auto py-4 space-y-3">
+                  {(detailModalResult.details || []).map((d, i) => (
+                    <div key={i} className={`p-4 rounded-xl border ${d.isCorrect ? "bg-emerald-50/50 border-emerald-200" : "bg-red-50/40 border-red-200"}`}>
+                      <div className="flex items-center justify-between gap-2 mb-1.5">
+                        <span className="text-xs font-extrabold text-slate-800">Soal No. {d.no} ({d.type})</span>
+                        <span className={`px-2 py-0.5 rounded text-xs font-bold ${d.isCorrect ? "bg-emerald-600 text-white" : "bg-red-600 text-white"}`}>
+                          {d.status}
+                        </span>
+                      </div>
+                      <div className="text-xs text-slate-700 mb-2 whitespace-pre-line">
+                        <MathText text={d.text} />
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                        <div className="p-2 rounded-lg bg-white border border-slate-200">
+                          <span className="text-slate-400 block">Jawaban Peserta:</span>
+                          <span className="font-bold text-slate-800"><MathText text={d.studentAnswerText} /></span>
+                        </div>
+                        <div className="p-2 rounded-lg bg-white border border-slate-200">
+                          <span className="text-slate-400 block">Kunci / Acuan:</span>
+                          <span className="font-bold text-emerald-700"><MathText text={d.correctAnswerText} /></span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="pt-3 border-t border-slate-200 flex items-center justify-between">
+                  <span className="text-sm font-extrabold text-blue-700">
+                    {detailModalResult.packageCategory === "SURVEI"
+                      ? `Total Skor Survei: ${detailModalResult.score} / ${detailModalResult.maxScore}`
+                      : `Nilai Akhir: ${detailModalResult.score}`}
+                  </span>
+                  <button
+                    onClick={() => setDetailModalResult(null)}
+                    className="px-5 py-2 rounded-xl bg-slate-900 text-white text-xs font-bold"
+                  >
+                    Tutup Detail
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    };
+
+    // =========================================================================
+    // 11. ROOT KOMPONEN APLIKASI
+    // =========================================================================
+    const App = () => {
+      const [booting, setBooting] = useState(true);
+      const [currentUser, setCurrentUser] = useState(null);
+      const [syncStatus, setSyncStatus] = useState("local");
+      const [config, setConfig] = useState(SEED_CONFIG);
+
+      const performSync = useCallback(async (silent = false) => {
+        const result = await CloudSync.pullAllFromCloud();
+        setSyncStatus(result.synced ? "cloud" : "local");
+        const savedCfg = await AsyncDB.get("settings", "app_config");
+        if (savedCfg) setConfig(savedCfg);
+        return result;
+      }, []);
+
+      useEffect(() => {
+        (async () => {
+          await performSync(true);
+          setBooting(false);
+        })();
+      }, [performSync]);
+
+      if (booting) {
+        return (
+          <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white">
+            <div className="text-center">
+              <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+              <p className="text-sm font-bold tracking-wide">Menyinkronkan Database Ujian...</p>
+            </div>
+          </div>
+        );
+      }
+
+      if (!currentUser) {
+        return (
+          <LoginView
+            config={config}
+            syncStatus={syncStatus}
+            onRefreshSync={performSync}
+            onLogin={setCurrentUser}
+          />
+        );
+      }
+
+      if (currentUser.role === "admin") {
+        return (
+          <AdminDashboard
+            user={currentUser}
+            config={config}
+            syncStatus={syncStatus}
+            onRefreshSync={performSync}
+            onConfigUpdate={setConfig}
+            onLogout={() => setCurrentUser(null)}
+          />
+        );
+      }
+
+      return (
+        <StudentDashboard
+          user={currentUser}
+          config={config}
+          syncStatus={syncStatus}
+          onRefreshSync={performSync}
+          onLogout={() => setCurrentUser(null)}
+        />
+      );
+    };
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>
